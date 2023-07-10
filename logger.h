@@ -1,9 +1,9 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include <stdarg.h>  // For va_list, va_start(), and va_end()
-#include <stdio.h>   // For printf()
-#include <stdlib.h>  // For exit()
+#include <stdarg.h>  
+#include <stdio.h>   
+#include <stdlib.h>
 #include "error.h"
 
 typedef enum {
@@ -15,7 +15,7 @@ typedef enum {
 
 extern LogLevel current_log_level;  // Declare as extern here, define in logger.c
 
-void log_message(LogLevel level, const char* format, ...);  // Declare functions here
-void log_error(Error error);
+void log_message(LogLevel level, const char* format, ...);
+void log_error(ErrorCode code, int line, const char* file, char* msg, ...);
 
 #endif  // LOGGER_H

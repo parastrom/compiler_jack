@@ -3,7 +3,7 @@ typedef enum {
     ERROR_INVALID_INPUT,
     ERROR_INVALID_OUTPUT,
     ERROR_MEMORY_ALLOCATION,
-    ERROR_DIRECTORY_OPEN
+    ERROR_OPEN_DIRECTORY
 } ErrorCode;
 
 
@@ -13,3 +13,6 @@ typedef struct {
     const char *file;
     int line;
 } Error;
+
+Error get_error(void);
+void set_error(Error error);

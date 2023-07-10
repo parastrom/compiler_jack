@@ -9,12 +9,9 @@
 static Error errors[MAX_ERRORS];
 static int num_errors = 0;
 
-void set_error(ErrorCode code, int line, const char* file, char* msg) {
+void set_error(Error error) {
     if(num_errors < MAX_ERRORS) {
-        errors[num_errors].code = code;
-        errors[num_errors].line = line;
-        errors[num_errors].file = file;
-        errors[num_errors].msg = msg;
+        errors[num_errors] = error;
         num_errors++;
     }
 }
