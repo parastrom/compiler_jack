@@ -16,6 +16,6 @@ typedef enum {
 extern LogLevel current_log_level;  // Declare as extern here, define in logger.c
 
 void log_message(LogLevel level, const char* format, ...);
-void log_error(ErrorCode code, int line, const char* file, char* msg, ...);
+void log_error(ErrorCode code, const char* file, int line, char* msg, ...);
 
 #endif  // LOGGER_H

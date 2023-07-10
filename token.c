@@ -86,3 +86,24 @@ void fmt(const Token* token) {
     printf("  Line: %d\t", token->line);
     printf("  File: %s  }\n", token->fl);
 }
+
+
+Token* init_token(TokenType type, const char* lx, int line, const char* fl) {
+    Token* token = malloc(sizeof(Token));
+    if (token == NULL) {
+        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Failed to allocate memory for token");
+        return NULL;
+    }
+    token->type = type;
+    strcpy(token->lx, lx);
+    token->line = line;
+    strcpy(token->fl, fl);
+
+    return token;
+}
+
+void destroy_token(Token* token) {
+    if (token != NULL) {
+        free(token);
+    }
+}

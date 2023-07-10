@@ -128,6 +128,8 @@ bool is_token_type_relational(TokenType type);
 bool is_token_type_bool(TokenType type);
 bool is_token_type_arith(TokenType type);
 
+Token* new_token(TokenType type, const char* lx, int line, const char* fl);
+void destroy_token(Token* token);
 TokenType get_token_type(const Token* token);
 char* get_token_lx(const Token* token);
 
