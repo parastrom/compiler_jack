@@ -3,7 +3,7 @@
 
 #define MAX_ERRORS 100
 
-#include "error.h";
+#include "headers/error.h"
 #include <stddef.h>
 
 static Error errors[MAX_ERRORS];

@@ -1,6 +1,5 @@
 #include "compiler.h"
-#include "logger.h"
-#include "error.h"
+#include "headers/logger.h"
 
 typedef struct {
     int parsed;
@@ -54,7 +53,6 @@ const char* remove_ext(const char* myStr) {
 
     return retStr;
 }
-
 
 int find_jack_files(const char* dir_name, CompilerState* state) {
     

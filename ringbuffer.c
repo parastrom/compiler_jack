@@ -1,6 +1,5 @@
-#include "ringbuffer.h"
-#include "logger.h"
-#include "error.h"
+#include "headers/ringbuffer.h"
+#include "headers/logger.h"
 
 RingBuffer* init_ringbuffer() {
     RingBuffer* buffer = malloc(sizeof(RingBuffer));
