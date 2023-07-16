@@ -5,8 +5,8 @@
 #include "ringbuffer.h"
 
 
-#define NUM_STATES 22
-#define NUM_EQ_CLASSES 20
+#define NUM_STATES 11
+#define NUM_EQ_CLASSES 10
 typedef struct {
     const char* input;
     size_t position;
@@ -22,25 +22,16 @@ typedef enum
 {
     C_white,        // space // \t \r
     C_newline,      // \n
-    C_alpha,        // a-z // A-Z
+    C_alpha,        // a-z // A-Z // _
     C_digit,        // 0-9
     C_double_quote, // "
-    C_slash,        // </>
-    C_star,         // <*>
-    C_less,         // '<'
-    C_greater,      // '>'
-    C_equal,        // '='
-    C_and,          // '&'
-    C_hyphen,       // '-'
-    C_or,           // '|'
-    C_exclamation,  // '!'
-    C_plus,         // '+'
-    C_period,         // '.'
-    C_underscore,   // '_'
-    C_symbol,       // <all symbols>
+    C_slash,        // /
+    C_star,         // \*
+    C_symbol,       // {, }, (, ), [, ], ., ,, ;, +, -, *, /, &, |, <, >, =, ~
     C_other,        // <all other characters>
     C_eof
 } EqClasses;
+
 
 typedef enum
 {
@@ -51,19 +42,10 @@ typedef enum
     COMMENT_START,
     IN_COMMENT_SINGLE,
     IN_COMMENT_MULTI,
-    SEEN_LESS_THAN,
-    SEEN_GREATER_THAN,
-    SEEN_EQUAL,
-    SEEN_EXCLAMATION,
-    SEEN_AND,
-    SEEN_HYPHEN,
-    SEEN_PLUS,
-    SEEN_ASTERISK,
-    SEEN_SLASH,
-    SEEN_OR,
     SEEN_STAR_IN_COMMENT,
+    SEEN_END_QUOTE,
+    IN_SYMBOL,
     ERROR,
-    IN_SYMBOL
 } States;
 
 

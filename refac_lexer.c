@@ -3,6 +3,9 @@
 #include "headers/token.h"
 #include <string.h>
 
+/**
+ * The transition table for the DFA.
+ */
 static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
     [START] = {
         [C_white] = START,
@@ -11,30 +14,21 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
         [C_digit] = IN_NUM,
         [C_double_quote] = IN_STRING,
         [C_slash] = COMMENT_START,
-        [C_star] = START,
+        [C_star] = IN_SYMBOL,
         [C_symbol] = IN_SYMBOL,
-        [C_underscore] = IN_ID,
-        [C_equal] = SEEN_EQUAL,
-        [C_exclamation] = SEEN_EXCLAMATION,
-        [C_less] = SEEN_LESS_THAN,
-        [C_greater] = SEEN_GREATER_THAN,
-        [C_and] = SEEN_AND,
-        [C_hyphen] = SEEN_HYPHEN,
-        [C_plus] = SEEN_PLUS,
-        [C_star] = SEEN_ASTERISK,
-        [C_slash] = SEEN_SLASH,
-        [C_or] = SEEN_OR,
         [C_other] = ERROR,
         [C_eof] = START,
     },
     [IN_ID] = {
         [C_white] = START,
+        [C_newline] = START,
         [C_alpha] = IN_ID,
         [C_digit] = IN_ID,
-        [C_underscore] = IN_ID,
         [C_double_quote] = START,
         [C_slash] = START,
+        [C_star] = START,
         [C_symbol] = START,
+        [C_other] = ERROR,
         [C_eof] = ERROR,
     },
     [IN_NUM] = {
@@ -43,38 +37,46 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
         [C_digit] = IN_NUM,
         [C_double_quote] = START,
         [C_slash] = START,
+        [C_star] = START,
         [C_symbol] = START,
-        [C_eof] = ERROR, // Handle EOF in number
+        [C_other] = ERROR,
+        [C_eof] = ERROR,
     },
     [IN_STRING] = {
         [C_white] = IN_STRING,
+        [C_newline] = ERROR,
         [C_alpha] = IN_STRING,
         [C_digit] = IN_STRING,
         [C_double_quote] = START,
         [C_slash] = IN_STRING,
+        [C_star] = IN_STRING,
         [C_symbol] = IN_STRING,
-        [C_eof] = START, // Handle EOF in string
+        [C_other] = IN_STRING,
+        [C_eof] = ERROR,
     },
     [COMMENT_START] = {
         [C_white] = START,
+        [C_newline] = START,
         [C_alpha] = START,
         [C_digit] = START,
         [C_double_quote] = START,
         [C_slash] = IN_COMMENT_SINGLE,
         [C_star] = IN_COMMENT_MULTI,
         [C_symbol] = START,
-        [C_eof] = START,
+        [C_other] = ERROR,
+        [C_eof] = ERROR,
     },
     [IN_COMMENT_SINGLE] = {
         [C_white] = IN_COMMENT_SINGLE,
+        [C_newline] = START,
         [C_alpha] = IN_COMMENT_SINGLE,
         [C_digit] = IN_COMMENT_SINGLE,
         [C_double_quote] = IN_COMMENT_SINGLE,
-        [C_slash] = IN_COMMENT_SINGLE, 
+        [C_slash] = IN_COMMENT_SINGLE,
         [C_star] = IN_COMMENT_SINGLE,
         [C_symbol] = IN_COMMENT_SINGLE,
-        [C_newline] = START,  // end of single-line comment
-        [C_eof] = ERROR, // Handle EOF in single line comment //
+        [C_other] = IN_COMMENT_SINGLE,
+        [C_eof] = ERROR,
     },
     [IN_COMMENT_MULTI] = {
         [C_white] = IN_COMMENT_MULTI,
@@ -82,67 +84,43 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
         [C_alpha] = IN_COMMENT_MULTI,
         [C_digit] = IN_COMMENT_MULTI,
         [C_double_quote] = IN_COMMENT_MULTI,
-        [C_slash] = IN_COMMENT_MULTI, 
-        [C_star] = SEEN_STAR_IN_COMMENT, // potential end of comment
+        [C_slash] = IN_COMMENT_MULTI,
+        [C_star] = SEEN_STAR_IN_COMMENT,
         [C_symbol] = IN_COMMENT_MULTI,
-        [C_eof] = ERROR, // Handle EOF in multi-line comment
+        [C_other] = IN_COMMENT_MULTI,
+        [C_eof] = ERROR,
     },
     [SEEN_STAR_IN_COMMENT] = {
-        [C_white] = IN_COMMENT_MULTI, 
-        [C_newline] = IN_COMMENT_MULTI, 
-        [C_alpha] = IN_COMMENT_MULTI, 
-        [C_digit] = IN_COMMENT_MULTI, 
-        [C_double_quote] = IN_COMMENT_MULTI, 
-        [C_slash] = START, // end of comment
-        [C_star] = SEEN_STAR_IN_COMMENT, // it's still potential end of comment
-        [C_symbol] = IN_COMMENT_MULTI, 
-        [C_eof] = ERROR, // Handle EOF in multi-line comment
+        [C_white] = IN_COMMENT_MULTI,
+        [C_newline] = IN_COMMENT_MULTI,
+        [C_alpha] = IN_COMMENT_MULTI,
+        [C_digit] = IN_COMMENT_MULTI,
+        [C_double_quote] = IN_COMMENT_MULTI,
+        [C_slash] = START,
+        [C_star] = SEEN_STAR_IN_COMMENT,
+        [C_symbol] = IN_COMMENT_MULTI,
+        [C_other] = IN_COMMENT_MULTI,
+        [C_eof] = ERROR,
     },
     [IN_SYMBOL] = {
         [C_white] = START,
-        [C_alpha] = START,
-        [C_digit] = START,
-        [C_double_quote] = START,
-        [C_slash] = START,
-        [C_star] = START,
-        [C_symbol] = START,
-        [C_eof] = START,
-    },
-    [SEEN_EQUAL] = {
-        [C_equal] = IN_SYMBOL,  // '==' found
-    },
-    [SEEN_EXCLAMATION] = {
-        [C_equal] = IN_SYMBOL,  // '!=' found
-    },
-    [SEEN_AND] = {
-        [C_and] = IN_SYMBOL,  // '&&' found
-        [C_equal] = IN_SYMBOL,  // '&=' found
-    },
-    [SEEN_HYPHEN] = {
-        [C_hyphen] = IN_SYMBOL,  // '--' found
-        [C_equal] = IN_SYMBOL,  // '-=' found
-    },
-    [SEEN_PLUS] = {
-        [C_plus] = IN_SYMBOL,  // '++' found
-        [C_equal] = IN_SYMBOL,  // '+=' found
-    },
-    [SEEN_ASTERISK] = {
-        [C_equal] = IN_SYMBOL,  // '*=' found
-    },
-    [SEEN_OR] = {
-        [C_or] = IN_SYMBOL,  // '||' found
-        [C_equal] = IN_SYMBOL,  // '|=' found
-    },
-    [SEEN_LESS_THAN] = {
-        [C_equal] = IN_SYMBOL,  // '<=' found
-        [C_less] = IN_SYMBOL,  // '<<' found
-    },
-    [SEEN_GREATER_THAN] = {
-        [C_equal] = IN_SYMBOL,  // '>=' found
-        [C_greater] = IN_SYMBOL,  // '>>' found
+        [C_newline] = START,
+        [C_alpha] = IN_ID,
+        [C_digit] = IN_NUM,
+        [C_double_quote] = IN_STRING,
+        [C_slash] = COMMENT_START,
+        [C_star] = IN_SYMBOL,
+        [C_symbol] = IN_SYMBOL,
+        [C_other] = ERROR,
+        [C_eof] = ERROR,
     },
 };
 
+
+
+/**
+ * The equivalence classes for character classification.
+ */
 EqClasses eq_classes[128];
 /**
  * Initialize the equivalence classes for character classification.
@@ -172,16 +150,16 @@ void initialize_eq_classes() {
     eq_classes['"'] = C_double_quote;
     eq_classes['/'] = C_slash;
     eq_classes['*'] = C_star;
-    eq_classes['+'] = C_plus;
-    eq_classes['-'] = C_hyphen;
-    eq_classes['='] = C_equal;
-    eq_classes['!'] = C_exclamation;
-    eq_classes['&'] = C_and;
-    eq_classes['|'] = C_or;
-    eq_classes['<'] = C_less;
-    eq_classes['>'] = C_greater;
-    eq_classes['.'] = C_period;
-    eq_classes['_'] = C_underscore;
+    eq_classes['+'] = C_symbol; 
+    eq_classes['-'] = C_symbol;
+    eq_classes['='] = C_symbol;
+    eq_classes['!'] = C_symbol;
+    eq_classes['&'] = C_symbol;
+    eq_classes['|'] = C_symbol;
+    eq_classes['<'] = C_symbol;
+    eq_classes['>'] = C_symbol;
+    eq_classes['.'] = C_symbol;
+    eq_classes['_'] = C_alpha;
     eq_classes['('] = C_symbol;
     eq_classes[')'] = C_symbol;
     eq_classes['['] = C_symbol;
@@ -333,9 +311,7 @@ TokenType determine_token_type(const char* token_str, int old_state) {
         case IN_STRING:
             return TOKEN_TYPE_STRING;
         case IN_SYMBOL:
-            if (strlen(token_str) > 1) {
-                return token_type_from_str(token_str);
-            } else {
+            if (strlen(token_str) == 1) {
                 return token_type_from_char(token_str[0]);
             }
         default:
@@ -355,49 +331,67 @@ void process_input(Lexer* lexer) {
     bool in_comment = false;
     int token_count = 0;
 
-    while (lexer->input[lexer->position] != '\0') {
-        char c = lexer->input[lexer->position++];
-        if (c == '\n') line++;
-
+    while (true) {
+        char c = lexer->input[lexer->position];
         EqClasses eq_class = eq_classes[(int)c];
-        //log_message(LOG_LEVEL_DEBUG, "Read character '%c' (eq_class: %d)\n", c, eq_class);
         int old_state = state;
         state = transition[state][eq_class];
-        //log_message(LOG_LEVEL_DEBUG, "State transition: %d -> %d ('%c')\n", old_state, state, c);
 
-        // Check if we are entering or leaving a comment
-        if (state == IN_COMMENT_SINGLE || state == IN_COMMENT_MULTI) {
-            in_comment = true;
-        } else if (old_state == IN_COMMENT_SINGLE || old_state == IN_COMMENT_MULTI) {
-            in_comment = false;
+        // Handle comment discarding
+        if (old_state == COMMENT_START && !(state == IN_COMMENT_SINGLE || state == IN_COMMENT_MULTI)) {
+            state = transition[START][eq_class]; // transition as if we were in the START state
+            if (state == IN_SYMBOL) {
+                size_t token_len = lexer->position - token_start;
+                const char* token_str = strndup(lexer->input + token_start, token_len);
+                TokenType type = determine_token_type(token_str, old_state);
+                Token* token = new_token(type, token_str, line);
+                ringbuffer_push(lexer->queue, token);
+                token_count++;
+                token_start = lexer->position;
+            }
         }
 
-        // Start of a new token
-        if (!in_comment && old_state == START && state != START) {
-            token_start = lexer->position - 1;
+        // Handle newline increment
+        if (c == '\n') line++;
+
+        // Check if we are not in a comment and have transitioned to a different state
+        in_comment = (state >= IN_COMMENT_SINGLE && state <= SEEN_STAR_IN_COMMENT);
+        if (!in_comment && old_state != state && old_state != START) {
+            if (old_state != IN_SYMBOL) {
+                size_t token_len = lexer->position - token_start;
+                const char* token_str = strndup(lexer->input + token_start, token_len);
+                TokenType type = determine_token_type(token_str, old_state);
+                Token* token = new_token(type, token_str, line);
+                ringbuffer_push(lexer->queue, token);
+                token_count++;
+                token_start = lexer->position;
+            }
         }
 
-        // End of token reached
-        if (!in_comment && old_state != START && state == START) {   
-            size_t token_len = lexer->position - token_start - 1; 
-            const char* token_str = strndup(lexer->input + token_start, token_len);
-            TokenType type = determine_token_type(token_str, old_state);
+        // If the current character is a symbol, create a new token for it
+        if (eq_class == C_symbol) {
+            const char* token_str = strndup(&c, 1);
+            TokenType type = determine_token_type(token_str, IN_SYMBOL);
             Token* token = new_token(type, token_str, line);
             ringbuffer_push(lexer->queue, token);
             token_count++;
-        } 
+            token_start = lexer->position + 1;
+        }
 
         // Handle lexer error
         if (state == ERROR) {
             printf("Lexer error\n");
-            // log_error(ERROR_LEXER, __FILE__, __LINE__, "Lexer error");
             return;
         }
-    }
-    log_message(LOG_LEVEL_DEBUG, "Lexer processed %d tokens\n", token_count);
-    // handle end of input...
-}
 
+        // Advance lexer position
+        lexer->position++;
+
+        if (c == '\0') break; // end of input
+    }
+
+    log_message(LOG_LEVEL_DEBUG, "Lexer processed %d tokens\n", token_count);
+}
 
 
 

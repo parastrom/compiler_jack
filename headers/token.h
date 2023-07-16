@@ -50,20 +50,6 @@ typedef enum
     TOKEN_TYPE_TILDE,
     TOKEN_TYPE_GREATER_THAN,
     TOKEN_TYPE_LESS_THAN,
-    TOKEN_TYPE_LESS_THAN_EQUAL,    // '<='
-    TOKEN_TYPE_GREATER_THAN_EQUAL, // '>='
-    TOKEN_TYPE_EQUAL_EQUAL,        // '=='
-    TOKEN_TYPE_NOT_EQUAL,          // '!='
-    TOKEN_TYPE_LOGICAL_AND,        // '&&'
-    TOKEN_TYPE_LOGICAL_OR,         // '||'
-    TOKEN_TYPE_INCREMENT,          // '++'
-    TOKEN_TYPE_DECREMENT,          // '--'
-    TOKEN_TYPE_PLUS_EQUAL,         // '+='
-    TOKEN_TYPE_MINUS_EQUAL,        // '-='
-    TOKEN_TYPE_MULTIPLY_EQUAL,     // '*='
-    TOKEN_TYPE_DIVIDE_EQUAL,       // '/='
-    TOKEN_TYPE_BITWISE_AND_EQUAL,  // '&='
-    TOKEN_TYPE_BITWISE_OR_EQUAL,   // '|='
 } TokenType;
 
 typedef enum

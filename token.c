@@ -25,20 +25,6 @@ static const TokenMapping tokenMappings[21] = {
     {"false", TOKEN_TYPE_FALSE},
     {"null", TOKEN_TYPE_NULL},
     {"this", TOKEN_TYPE_THIS},
-    {"<=", TOKEN_TYPE_LESS_THAN_EQUAL},
-    {">=", TOKEN_TYPE_GREATER_THAN_EQUAL},
-    {"==", TOKEN_TYPE_EQUAL_EQUAL},
-    {"!=", TOKEN_TYPE_NOT_EQUAL},
-    {"&&", TOKEN_TYPE_LOGICAL_AND},
-    {"||", TOKEN_TYPE_LOGICAL_OR},
-    {"++", TOKEN_TYPE_INCREMENT},
-    {"--", TOKEN_TYPE_DECREMENT},
-    {"+=", TOKEN_TYPE_PLUS_EQUAL},
-    {"-=", TOKEN_TYPE_MINUS_EQUAL},
-    {"*=", TOKEN_TYPE_MULTIPLY_EQUAL},
-    {"/=", TOKEN_TYPE_DIVIDE_EQUAL},
-    {"&=", TOKEN_TYPE_BITWISE_AND_EQUAL},
-    {"|=", TOKEN_TYPE_BITWISE_OR_EQUAL},
 };
 
 static const TokenCategory tokenCategories[62] = {
@@ -71,17 +57,6 @@ static const TokenCategory tokenCategories[62] = {
     [TOKEN_TYPE_EQUAL] = TOKEN_CATEGORY_RELATIONAL,
     [TOKEN_TYPE_GREATER_THAN] = TOKEN_CATEGORY_RELATIONAL,
     [TOKEN_TYPE_LESS_THAN] = TOKEN_CATEGORY_RELATIONAL,
-    [TOKEN_TYPE_NOT_EQUAL] = TOKEN_CATEGORY_RELATIONAL,
-    [TOKEN_TYPE_LOGICAL_AND] = TOKEN_CATEGORY_BOOLEAN,
-    [TOKEN_TYPE_LOGICAL_OR] = TOKEN_CATEGORY_BOOLEAN,
-    [TOKEN_TYPE_INCREMENT] = TOKEN_CATEGORY_FACTOR | TOKEN_CATEGORY_ARITH,
-    [TOKEN_TYPE_DECREMENT] = TOKEN_CATEGORY_FACTOR | TOKEN_CATEGORY_ARITH,
-    [TOKEN_TYPE_PLUS_EQUAL] = TOKEN_CATEGORY_FACTOR | TOKEN_CATEGORY_ARITH,
-    [TOKEN_TYPE_MINUS_EQUAL] = TOKEN_CATEGORY_FACTOR | TOKEN_CATEGORY_ARITH,
-    [TOKEN_TYPE_MULTIPLY_EQUAL] = TOKEN_CATEGORY_FACTOR | TOKEN_CATEGORY_ARITH,
-    [TOKEN_TYPE_DIVIDE_EQUAL] = TOKEN_CATEGORY_FACTOR | TOKEN_CATEGORY_ARITH,
-    [TOKEN_TYPE_BITWISE_AND_EQUAL] = TOKEN_CATEGORY_FACTOR | TOKEN_CATEGORY_ARITH,
-    [TOKEN_TYPE_BITWISE_OR_EQUAL] = TOKEN_CATEGORY_FACTOR | TOKEN_CATEGORY_ARITH,
 };
 
 static const TokenType charToTokenType[256] = {
@@ -106,30 +81,22 @@ static const TokenType charToTokenType[256] = {
     ['>'] = TOKEN_TYPE_GREATER_THAN,
 };
 
-const char* token_type_names[] = {
-    "TOKEN_TYPE_UNRECOGNISED","TOKEN_TYPE_ID","TOKEN_TYPE_NUM",
-    "TOKEN_TYPE_STRING","TOKEN_TYPE_CLASS","TOKEN_TYPE_CONSTRUCTOR",
-    "TOKEN_TYPE_METHOD","TOKEN_TYPE_FUNCTION","TOKEN_TYPE_INT",
-    "TOKEN_TYPE_BOOLEAN","TOKEN_TYPE_CHAR","TOKEN_TYPE_VOID",
-    "TOKEN_TYPE_VAR","TOKEN_TYPE_STATIC","TOKEN_TYPE_FIELD",
-    "TOKEN_TYPE_LET","TOKEN_TYPE_DO","TOKEN_TYPE_IF",
-    "TOKEN_TYPE_ELSE","TOKEN_TYPE_WHILE","TOKEN_TYPE_RETURN",
-    "TOKEN_TYPE_TRUE","TOKEN_TYPE_FALSE","TOKEN_TYPE_NULL",
-    "TOKEN_TYPE_THIS","TOKEN_TYPE_OPEN_PAREN","TOKEN_TYPE_CLOSE_PAREN",
-    "TOKEN_TYPE_OPEN_BRACE","TOKEN_TYPE_CLOSE_BRACE","TOKEN_TYPE_OPEN_BRACKET",
-    "TOKEN_TYPE_CLOSE_BRACKET","TOKEN_TYPE_COMMA","TOKEN_TYPE_SEMICOLON",
-    "TOKEN_TYPE_EQUAL","TOKEN_TYPE_PERIOD","TOKEN_TYPE_PLUS",
-    "TOKEN_TYPE_HYPHEN","TOKEN_TYPE_ASTERISK","TOKEN_TYPE_SLASH",
-    "TOKEN_TYPE_AMPERSAND","TOKEN_TYPE_BAR","TOKEN_TYPE_TILDE",
-    "TOKEN_TYPE_GREATER_THAN","TOKEN_TYPE_LESS_THAN","TOKEN_TYPE_LESS_THAN_EQUAL",
-    "TOKEN_TYPE_GREATER_THAN_EQUAL","TOKEN_TYPE_EQUAL_EQUAL","TOKEN_TYPE_NOT_EQUAL",
-    "TOKEN_TYPE_LOGICAL_AND","TOKEN_TYPE_LOGICAL_OR","TOKEN_TYPE_INCREMENT",
-    "TOKEN_TYPE_DECREMENT","TOKEN_TYPE_PLUS_EQUAL","TOKEN_TYPE_MINUS_EQUAL",
-    "TOKEN_TYPE_MULTIPLY_EQUAL","TOKEN_TYPE_DIVIDE_EQUAL","TOKEN_TYPE_BITWISE_AND_EQUAL",
-    "TOKEN_TYPE_BITWISE_OR_EQUAL"
-};
-
-
+const char *token_type_names[] = {
+    "TOKEN_TYPE_UNRECOGNISED", "TOKEN_TYPE_ID", "TOKEN_TYPE_NUM",
+    "TOKEN_TYPE_STRING", "TOKEN_TYPE_CLASS", "TOKEN_TYPE_CONSTRUCTOR",
+    "TOKEN_TYPE_METHOD", "TOKEN_TYPE_FUNCTION", "TOKEN_TYPE_INT",
+    "TOKEN_TYPE_BOOLEAN", "TOKEN_TYPE_CHAR", "TOKEN_TYPE_VOID",
+    "TOKEN_TYPE_VAR", "TOKEN_TYPE_STATIC", "TOKEN_TYPE_FIELD",
+    "TOKEN_TYPE_LET", "TOKEN_TYPE_DO", "TOKEN_TYPE_IF",
+    "TOKEN_TYPE_ELSE", "TOKEN_TYPE_WHILE", "TOKEN_TYPE_RETURN",
+    "TOKEN_TYPE_TRUE", "TOKEN_TYPE_FALSE", "TOKEN_TYPE_NULL",
+    "TOKEN_TYPE_THIS", "TOKEN_TYPE_OPEN_PAREN", "TOKEN_TYPE_CLOSE_PAREN",
+    "TOKEN_TYPE_OPEN_BRACE", "TOKEN_TYPE_CLOSE_BRACE", "TOKEN_TYPE_OPEN_BRACKET",
+    "TOKEN_TYPE_CLOSE_BRACKET", "TOKEN_TYPE_COMMA", "TOKEN_TYPE_SEMICOLON",
+    "TOKEN_TYPE_EQUAL", "TOKEN_TYPE_PERIOD", "TOKEN_TYPE_PLUS",
+    "TOKEN_TYPE_HYPHEN", "TOKEN_TYPE_ASTERISK", "TOKEN_TYPE_SLASH",
+    "TOKEN_TYPE_AMPERSAND", "TOKEN_TYPE_BAR", "TOKEN_TYPE_TILDE",
+    "TOKEN_TYPE_GREATER_THAN", "TOKEN_TYPE_LESS_THAN"};
 
 /**
  * Get the TokenType corresponding to the given string.
@@ -137,11 +104,14 @@ const char* token_type_names[] = {
  * @param str The string representation of the token.
  * @return The TokenType corresponding to the string, or TOKEN_TYPE_ID if not found.
  */
-TokenType token_type_from_str(const char* str) {
+TokenType token_type_from_str(const char *str)
+{
     size_t numMappings = sizeof(tokenMappings) / sizeof(TokenMapping);
 
-    for (size_t i = 0; i < numMappings; i++) {
-        if (strcmp(str, tokenMappings[i].str) == 0) {
+    for (size_t i = 0; i < numMappings; i++)
+    {
+        if (strcmp(str, tokenMappings[i].str) == 0)
+        {
             return tokenMappings[i].tokenType;
         }
     }
@@ -155,7 +125,8 @@ TokenType token_type_from_str(const char* str) {
  * @param ch The character representation of the token.
  * @return The TokenType corresponding to the character, or TOKEN_TYPE_UNRECOGNIZED if not found.
  */
-TokenType token_type_from_char(char ch) {
+TokenType token_type_from_char(char ch)
+{
     return charToTokenType[(unsigned char)ch];
 }
 
@@ -165,11 +136,13 @@ TokenType token_type_from_char(char ch) {
  * @param type The TokenType of the token.
  * @return The TokenCategory of the token, or TOKEN_CATEGORY_UNRECOGNISED if not found.
  */
-TokenCategory get_token_category(TokenType type) {
+TokenCategory get_token_category(TokenType type)
+{
 
     size_t numTokenCategories = sizeof(tokenCategories) / sizeof(TokenCategory);
 
-    if (type < numTokenCategories) {
+    if (type < numTokenCategories)
+    {
         return tokenCategories[type];
     }
 
@@ -183,7 +156,8 @@ TokenCategory get_token_category(TokenType type) {
  * @param category The TokenCategory to check against.
  * @return True if the token belongs to the category, false otherwise.
  */
-bool is_token_of_category(TokenType type, TokenCategory category) {
+bool is_token_of_category(TokenType type, TokenCategory category)
+{
     return (get_token_category(type) & category) != 0;
 }
 
@@ -193,7 +167,8 @@ bool is_token_of_category(TokenType type, TokenCategory category) {
  * @param token The token.
  * @return The TokenType of the token.
  */
-TokenType get_token_type(const Token* token) {
+TokenType get_token_type(const Token *token)
+{
     return token->type;
 }
 
@@ -203,7 +178,8 @@ TokenType get_token_type(const Token* token) {
  * @param token The token.
  * @return The lexeme of the token.
  */
-char* get_token_lx(const Token* token) {
+char *get_token_lx(const Token *token)
+{
     return token->lx;
 }
 
@@ -212,13 +188,13 @@ char* get_token_lx(const Token* token) {
  *
  * @param token The token to format and print.
  */
-void fmt(const Token* token) {
-    printf("Token {  type: %-30s Lexeme: %-10s Line: %d }", 
-           token_type_names[token->type], 
-           token->lx, 
+void fmt(const Token *token)
+{
+    printf("Token {  type: %-30s Lexeme: %-10s Line: %d }",
+           token_type_names[token->type],
+           token->lx,
            token->line);
 }
-
 
 /**
  * Create a new token. Takes ownership of the 'lx' string,
@@ -228,23 +204,27 @@ void fmt(const Token* token) {
  * @param line The line number where the token was found.
  * @return A pointer to the newly created token.
  */
-Token* new_token(TokenType type, const char* lx, int line) {
-    Token* token = malloc(sizeof(Token));
-    if (token == NULL) {
+Token *new_token(TokenType type, const char *lx, int line)
+{
+    Token *token = malloc(sizeof(Token));
+    if (token == NULL)
+    {
         log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Failed to allocate memory for token");
         return NULL;
     }
     token->type = type;
-    token->lx = lx;  // Take ownership of the lx string
+    token->lx = lx; // Take ownership of the lx string
     token->line = line;
 
     return token;
 }
 
-void destroy_token(Token* token) {
-    if (token != NULL) {
-        free(token->lx);  // Free the dynamically allocated memory for 'lx'
-        free(token);      // Free the 'Token' struct itself
+void destroy_token(Token *token)
+{
+    if (token != NULL)
+    {
+        free(token->lx); // Free the dynamically allocated memory for 'lx'
+        free(token);     // Free the 'Token' struct itself
     }
 }
 
@@ -254,14 +234,16 @@ void destroy_token(Token* token) {
  * @param capacity The initial capacity of the token table.
  * @return A pointer to the newly created token table.
  */
-TokenTable* new_token_table(size_t capacity) {
-    TokenTable* table = malloc(sizeof(TokenTable));
-    if (table == NULL) {
+TokenTable *new_token_table(size_t capacity)
+{
+    TokenTable *table = malloc(sizeof(TokenTable));
+    if (table == NULL)
+    {
         log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Failed to allocate memory for token table");
         return NULL;
     }
 
-    table->keys = calloc(capacity, sizeof(char*));
+    table->keys = calloc(capacity, sizeof(char *));
     table->values = calloc(capacity, sizeof(TokenType));
     table->size = capacity;
 
@@ -277,9 +259,11 @@ TokenTable* new_token_table(size_t capacity) {
  * @param size The size of the token table.
  * @return The computed hash value.
  */
-size_t hash(const char* key, size_t size) {
+size_t hash(const char *key, size_t size)
+{
     size_t hashval = 0;
-    while (*key != '\0') {
+    while (*key != '\0')
+    {
         hashval = (hashval << 5) - hashval + *key++;
     }
     return hashval % size;
@@ -292,10 +276,13 @@ size_t hash(const char* key, size_t size) {
  * @param key The key to insert.
  * @param value The value associated with the key.
  */
-void token_table_insert(TokenTable* table, const char* key, TokenType value) {
+void token_table_insert(TokenTable *table, const char *key, TokenType value)
+{
     size_t index = hash(key, table->size);
-    while (table->keys[index] != NULL) {
-        if (strcmp(table->keys[index], key) == 0) {
+    while (table->keys[index] != NULL)
+    {
+        if (strcmp(table->keys[index], key) == 0)
+        {
             table->values[index] = value;
             return;
         }
@@ -312,10 +299,13 @@ void token_table_insert(TokenTable* table, const char* key, TokenType value) {
  * @param key The key to look up.
  * @return The value associated with the key, or TOKEN_TYPE_ID if not found.
  */
-TokenType token_table_lookup(TokenTable* table, const char* key) {
+TokenType token_table_lookup(TokenTable *table, const char *key)
+{
     size_t index = hash(key, table->size);
-    while (table->keys[index] != NULL) {
-        if (strcmp(table->keys[index], key) == 0) {
+    while (table->keys[index] != NULL)
+    {
+        if (strcmp(table->keys[index], key) == 0)
+        {
             return table->values[index];
         }
         index = (index + 1) % table->size;
@@ -323,30 +313,36 @@ TokenType token_table_lookup(TokenTable* table, const char* key) {
     return TOKEN_TYPE_ID;
 }
 
-void destroy_token_table(TokenTable* table) {
-    if (table != NULL) {
-        if (table->keys != NULL) {
-            for (size_t i = 0; i < table->size; i++) {
-                if (table->keys[i] != NULL) {
+void destroy_token_table(TokenTable *table)
+{
+    if (table != NULL)
+    {
+        if (table->keys != NULL)
+        {
+            for (size_t i = 0; i < table->size; i++)
+            {
+                if (table->keys[i] != NULL)
+                {
                     free(table->keys[i]);
                 }
             }
             free(table->keys);
         }
-        if (table->values != NULL) {
+        if (table->values != NULL)
+        {
             free(table->values);
         }
         free(table);
     }
 }
 
-
 /**
  * Initialize the token table with predefined key-value pairs.
  *
  * @param table The token table to initialize.
  */
-void init_token_table(TokenTable* table) {
+void init_token_table(TokenTable *table)
+{
     token_table_insert(table, "class", TOKEN_TYPE_CLASS);
     token_table_insert(table, "constructor", TOKEN_TYPE_CONSTRUCTOR);
     token_table_insert(table, "function", TOKEN_TYPE_FUNCTION);
@@ -368,18 +364,4 @@ void init_token_table(TokenTable* table) {
     token_table_insert(table, "else", TOKEN_TYPE_ELSE);
     token_table_insert(table, "while", TOKEN_TYPE_WHILE);
     token_table_insert(table, "return", TOKEN_TYPE_RETURN);
-    token_table_insert(table, "<=",  TOKEN_TYPE_LESS_THAN_EQUAL);
-    token_table_insert(table, ">=",  TOKEN_TYPE_GREATER_THAN_EQUAL);
-    token_table_insert(table, "==",  TOKEN_TYPE_EQUAL_EQUAL);
-    token_table_insert(table, "!=",  TOKEN_TYPE_NOT_EQUAL);
-    token_table_insert(table, "&&",  TOKEN_TYPE_LOGICAL_AND);
-    token_table_insert(table, "||",  TOKEN_TYPE_LOGICAL_OR);
-    token_table_insert(table, "++", TOKEN_TYPE_INCREMENT);
-    token_table_insert(table, "--", TOKEN_TYPE_DECREMENT);
-    token_table_insert(table, "+=", TOKEN_TYPE_PLUS_EQUAL);
-    token_table_insert(table, "-=", TOKEN_TYPE_MINUS_EQUAL);
-    token_table_insert(table, "*=", TOKEN_TYPE_MULTIPLY_EQUAL);
-    token_table_insert(table, "/=", TOKEN_TYPE_DIVIDE_EQUAL);
-    token_table_insert(table, "&=", TOKEN_TYPE_BITWISE_AND_EQUAL);
-    token_table_insert(table, "|=", TOKEN_TYPE_BITWISE_OR_EQUAL);
 }
