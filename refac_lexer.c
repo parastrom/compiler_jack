@@ -24,9 +24,9 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
         [C_newline] = START,
         [C_alpha] = IN_ID,
         [C_digit] = IN_ID,
-        [C_double_quote] = START,
-        [C_slash] = START,
-        [C_star] = START,
+        [C_double_quote] = IN_STRING,
+        [C_slash] = COMMENT_START,
+        [C_star] = IN_SYMBOL,
         [C_symbol] = START,
         [C_other] = ERROR,
         [C_eof] = ERROR,
@@ -35,10 +35,10 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
         [C_white] = START,
         [C_alpha] = START,
         [C_digit] = IN_NUM,
-        [C_double_quote] = START,
-        [C_slash] = START,
-        [C_star] = START,
-        [C_symbol] = START,
+        [C_double_quote] = IN_STRING,
+        [C_slash] = COMMENT_START,
+        [C_star] = IN_SYMBOL,
+        [C_symbol] = IN_SYMBOL,
         [C_other] = ERROR,
         [C_eof] = ERROR,
     },
@@ -57,8 +57,8 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
     [COMMENT_START] = {
         [C_white] = START,
         [C_newline] = START,
-        [C_alpha] = START,
-        [C_digit] = START,
+        [C_alpha] = IN_ID,
+        [C_digit] = IN_NUM,
         [C_double_quote] = START,
         [C_slash] = IN_COMMENT_SINGLE,
         [C_star] = IN_COMMENT_MULTI,
@@ -319,6 +319,24 @@ TokenType determine_token_type(const char* token_str, int old_state) {
     }
 }
 
+
+/**
+ * @brief Create a token object
+ * 
+ * @param lexer - The lexer object
+ * @param old_state - The previous state of the lexer
+ * @param token_start - The start position of the token
+ * @param token_len - The length of the token
+ * @param line - The line number of the token
+ * @param token_count - The number of tokens created so far
+ */
+void create_token(Lexer* lexer, int old_state, size_t token_start, size_t token_len, int line) {
+    const char* token_str = strndup(lexer->input + token_start, token_len);
+    TokenType type = determine_token_type(token_str, old_state);
+    Token* token = new_token(type, token_str, line);
+    ringbuffer_push(lexer->queue, token);
+}
+
 /**
  * Process the input string and tokenize it using the lexer.
  *
@@ -329,51 +347,39 @@ void process_input(Lexer* lexer) {
     int line = 1;
     size_t token_start = 0;
     bool in_comment = false;
+    bool was_in_comment = false;
     int token_count = 0;
 
     while (true) {
         char c = lexer->input[lexer->position];
         EqClasses eq_class = eq_classes[(int)c];
         int old_state = state;
-        state = transition[state][eq_class];
-
-        // Handle comment discarding
-        if (old_state == COMMENT_START && !(state == IN_COMMENT_SINGLE || state == IN_COMMENT_MULTI)) {
-            state = transition[START][eq_class]; // transition as if we were in the START state
-            if (state == IN_SYMBOL) {
-                size_t token_len = lexer->position - token_start;
-                const char* token_str = strndup(lexer->input + token_start, token_len);
-                TokenType type = determine_token_type(token_str, old_state);
-                Token* token = new_token(type, token_str, line);
-                ringbuffer_push(lexer->queue, token);
-                token_count++;
-                token_start = lexer->position;
-            }
-        }
+        int next_state = transition[state][eq_class];
 
         // Handle newline increment
         if (c == '\n') line++;
 
+        was_in_comment = in_comment;
+        in_comment = (next_state >= IN_COMMENT_SINGLE && next_state <= SEEN_STAR_IN_COMMENT);
+
         // Check if we are not in a comment and have transitioned to a different state
-        in_comment = (state >= IN_COMMENT_SINGLE && state <= SEEN_STAR_IN_COMMENT);
-        if (!in_comment && old_state != state && old_state != START) {
-            if (old_state != IN_SYMBOL) {
-                size_t token_len = lexer->position - token_start;
-                const char* token_str = strndup(lexer->input + token_start, token_len);
-                TokenType type = determine_token_type(token_str, old_state);
-                Token* token = new_token(type, token_str, line);
-                ringbuffer_push(lexer->queue, token);
+        if (!in_comment && next_state != old_state) {
+            if (old_state != START && old_state != IN_SYMBOL) {
+                create_token(lexer, old_state, token_start, lexer->position - token_start, line);
                 token_count++;
+            }
+            // Update token_start when transitioning from START state to another state
+            // Or transitioning out of a comment state
+            if (old_state == START || was_in_comment) {
                 token_start = lexer->position;
             }
         }
 
-        // If the current character is a symbol, create a new token for it
-        if (eq_class == C_symbol) {
-            const char* token_str = strndup(&c, 1);
-            TokenType type = determine_token_type(token_str, IN_SYMBOL);
-            Token* token = new_token(type, token_str, line);
-            ringbuffer_push(lexer->queue, token);
+        state = next_state;  // update state after generating tokens
+
+        // If the current character is a symbol and we are not in a string or comment, create a new token for it
+        if (eq_class == C_symbol && state != IN_STRING && !in_comment) {
+            create_token(lexer, IN_SYMBOL, lexer->position, 1, line);
             token_count++;
             token_start = lexer->position + 1;
         }
@@ -392,6 +398,11 @@ void process_input(Lexer* lexer) {
 
     log_message(LOG_LEVEL_DEBUG, "Lexer processed %d tokens\n", token_count);
 }
+
+
+
+
+
 
 
 
