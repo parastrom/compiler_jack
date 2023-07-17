@@ -1,5 +1,4 @@
 #include "headers/refac_lexer.h"
-#include "headers/logger.h"
 #include "headers/token.h"
 #include <string.h>
 
@@ -59,10 +58,10 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
         [C_newline] = START,
         [C_alpha] = IN_ID,
         [C_digit] = IN_NUM,
-        [C_double_quote] = START,
+        [C_double_quote] = IN_STRING,
         [C_slash] = IN_COMMENT_SINGLE,
         [C_star] = IN_COMMENT_MULTI,
-        [C_symbol] = START,
+        [C_symbol] = IN_SYMBOL,
         [C_other] = ERROR,
         [C_eof] = ERROR,
     },
@@ -112,7 +111,7 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
         [C_star] = IN_SYMBOL,
         [C_symbol] = IN_SYMBOL,
         [C_other] = ERROR,
-        [C_eof] = ERROR,
+        [C_eof] = START,
     },
 };
 
@@ -169,6 +168,7 @@ void initialize_eq_classes() {
     eq_classes[';'] = C_symbol;
     eq_classes[','] = C_symbol;
     eq_classes['~'] = C_symbol;
+    eq_classes['\0'] = C_eof;
 }
 
 
@@ -226,8 +226,10 @@ char* read_file_into_string(const char* filename) {
 
 /**
  * Initialize a new lexer with the given filename.
- *
- * @param filename The name of the file to be processed by the lexer.
+ * The lexer will read the contents of the file into a string buffer.
+ * The buffer is owned by the lexer.
+ * Ownership of the filename is also transferred to the lexer.
+ * @param filename The name of the file to be processed by the lexer - 
  * @return A pointer to the initialized lexer.
  */
 Lexer* init_lexer(const char* filename) {
@@ -244,6 +246,9 @@ Lexer* init_lexer(const char* filename) {
         return NULL;
         
     }
+    
+    lexer->filename = filename;
+    
     lexer->position = 0;
     lexer->queue = init_ringbuffer();
     lexer->peeked_token = NULL;
@@ -254,7 +259,7 @@ Lexer* init_lexer(const char* filename) {
         return NULL;
     }
 
-    process_input(lexer);
+    lexer->error_code =process_input(lexer);
 
     return lexer;
 }
@@ -311,6 +316,7 @@ TokenType determine_token_type(const char* token_str, int old_state) {
         case IN_STRING:
             return TOKEN_TYPE_STRING;
         case IN_SYMBOL:
+        case COMMENT_START:
             if (strlen(token_str) == 1) {
                 return token_type_from_char(token_str[0]);
             }
@@ -342,35 +348,39 @@ void create_token(Lexer* lexer, int old_state, size_t token_start, size_t token_
  *
  * @param lexer The lexer object.
  */
-void process_input(Lexer* lexer) {
+ErrorCode process_input(Lexer* lexer) {
     int state = START;
     int line = 1;
     size_t token_start = 0;
     bool in_comment = false;
+    int old_state = START;
     bool was_in_comment = false;
     int token_count = 0;
 
     while (true) {
         char c = lexer->input[lexer->position];
         EqClasses eq_class = eq_classes[(int)c];
-        int old_state = state;
+        old_state = state;
         int next_state = transition[state][eq_class];
 
         // Handle newline increment
         if (c == '\n') line++;
 
-        was_in_comment = in_comment;
+        // Check if we were in a comment
+        was_in_comment = (state >= IN_COMMENT_SINGLE && state <= SEEN_STAR_IN_COMMENT);
+
+        // Check if we are moving into a comment
         in_comment = (next_state >= IN_COMMENT_SINGLE && next_state <= SEEN_STAR_IN_COMMENT);
 
-        // Check if we are not in a comment and have transitioned to a different state
-        if (!in_comment && next_state != old_state) {
-            if (old_state != START && old_state != IN_SYMBOL) {
-                create_token(lexer, old_state, token_start, lexer->position - token_start, line);
+        // Check if we have transitioned to a different state and not in a comment
+        if (!was_in_comment && next_state != state && !in_comment) {
+            // If the old state was not START, IN_SYMBOL, or COMMENT_START, create a token
+            if (state != START && state != IN_SYMBOL) {
+                create_token(lexer, state, token_start, lexer->position - token_start, line);
                 token_count++;
             }
             // Update token_start when transitioning from START state to another state
-            // Or transitioning out of a comment state
-            if (old_state == START || was_in_comment) {
+            if (state == START || state == COMMENT_START) {
                 token_start = lexer->position;
             }
         }
@@ -384,10 +394,21 @@ void process_input(Lexer* lexer) {
             token_start = lexer->position + 1;
         }
 
-        // Handle lexer error
+       // Handle lexer error
         if (state == ERROR) {
-            printf("Lexer error\n");
-            return;
+            if (old_state == IN_STRING && c == '\n') {
+                log_error(ERROR_LEXER_NEWLINE_IN_STRING, __FILE__, line, "Lexer error: newline in string at line %d", line);
+                return ERROR_LEXER_NEWLINE_IN_STRING;
+            } else if (old_state == IN_STRING && c == '\0') {
+                log_error(ERROR_LEXER_EOF_IN_STRING, __FILE__, line, "Lexer error: EOF in string at line %d", line);
+                return ERROR_LEXER_EOF_IN_STRING;
+            } else if (c == '\0') {
+                log_error(ERROR_LEXER_UNEXPECTED_EOF, __FILE__, line, "Lexer error: unexpected EOF at line %d", line);
+                return ERROR_LEXER_UNEXPECTED_EOF;
+            } else {
+                log_error(ERROR_LEXER_ILLEGAL_SYMBOL, __FILE__, line, "Lexer error: illegal symbol '%c' at line %d", c, line);
+                return ERROR_LEXER_ILLEGAL_SYMBOL;
+            }
         }
 
         // Advance lexer position
@@ -397,7 +418,11 @@ void process_input(Lexer* lexer) {
     }
 
     log_message(LOG_LEVEL_DEBUG, "Lexer processed %d tokens\n", token_count);
+    
+    return ERROR_NONE;
 }
+
+
 
 
 

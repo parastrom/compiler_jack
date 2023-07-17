@@ -45,9 +45,9 @@ int main() {
         Token* token = NULL;
         while (ringbuffer_peek(lexer->queue) != NULL) {
             ringbuffer_pop(lexer->queue, &token);
-            fmt(token);
+            //fmt(token);
             token = NULL;
-            printf("\n");
+            //printf("\n");
         }
 
         destroy_lexer(lexer);

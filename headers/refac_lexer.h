@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include "ringbuffer.h"
+#include "logger.h"
 
 
 #define NUM_STATES 11
@@ -12,8 +13,10 @@ typedef struct {
     size_t position;
     Token* peeked_token;
     Token* current_token;
+    const char* filename;
     int cur_len;
     RingBuffer* queue;
+    ErrorCode error_code;
 } Lexer;
 
 
@@ -32,7 +35,6 @@ typedef enum
     C_eof
 } EqClasses;
 
-
 typedef enum
 {
     START,
@@ -48,12 +50,10 @@ typedef enum
     ERROR,
 } States;
 
-
-
 Lexer* init_lexer(const char* input);
 void initialize_eq_classes();
-void process_input(Lexer* lexer);
 void destroy_lexer(Lexer* lexer);
+ErrorCode process_input(Lexer* lexer);
 char* read_file_into_string(const char* filename);
 char* strip(const char* str);
 
