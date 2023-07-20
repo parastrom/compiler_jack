@@ -7,7 +7,6 @@
 
 #define RINGBUFFER_SIZE 2048
 
-
 typedef struct {
     Token* data[RINGBUFFER_SIZE];
     size_t read_idx;

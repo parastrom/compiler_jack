@@ -5,21 +5,17 @@
 #include "ringbuffer.h"
 #include "logger.h"
 
-
 #define NUM_STATES 11
 #define NUM_EQ_CLASSES 10
-typedef struct {
-    const char* input;
+typedef struct
+{
+    const char *input;
     size_t position;
-    Token* peeked_token;
-    Token* current_token;
-    const char* filename;
+    const char *filename;
     int cur_len;
-    RingBuffer* queue;
+    RingBuffer *queue;
     ErrorCode error_code;
 } Lexer;
-
-
 
 typedef enum
 {
@@ -50,13 +46,11 @@ typedef enum
     ERROR,
 } States;
 
-Lexer* init_lexer(const char* input);
+Lexer *init_lexer(const char *input);
 void initialize_eq_classes();
-void destroy_lexer(Lexer* lexer);
-ErrorCode process_input(Lexer* lexer);
-char* read_file_into_string(const char* filename);
-char* strip(const char* str);
+void destroy_lexer(Lexer *lexer);
+ErrorCode process_input(Lexer *lexer);
+char *read_file_into_string(const char *filename);
+char *strip(const char *str);
 
-
-
-#endif  // REFAC_LEXER_H
+#endif // REFAC_LEXER_H

@@ -94,6 +94,7 @@ TokenType token_table_lookup(TokenTable* table, const char* key);
 void init_token_table(TokenTable* table);
 
 
+const char* token_type_to_string(TokenType type);
 TokenType token_type_from_str(const char *str);
 TokenType token_type_from_char(char ch);
 

@@ -251,8 +251,6 @@ Lexer* init_lexer(const char* filename) {
     
     lexer->position = 0;
     lexer->queue = init_ringbuffer();
-    lexer->peeked_token = NULL;
-    lexer->current_token = NULL;
     if (lexer->queue == NULL) {
         log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for lexer queue\n");
         free(lexer);

@@ -57,6 +57,11 @@ static const TokenCategory tokenCategories[62] = {
     [TOKEN_TYPE_EQUAL] = TOKEN_CATEGORY_RELATIONAL,
     [TOKEN_TYPE_GREATER_THAN] = TOKEN_CATEGORY_RELATIONAL,
     [TOKEN_TYPE_LESS_THAN] = TOKEN_CATEGORY_RELATIONAL,
+    [TOKEN_TYPE_PLUS] = TOKEN_CATEGORY_ARITH,
+    [TOKEN_TYPE_ASTERISK] = TOKEN_CATEGORY_ARITH,
+    [TOKEN_TYPE_SLASH] = TOKEN_CATEGORY_ARITH,
+    [TOKEN_TYPE_AMPERSAND] = TOKEN_CATEGORY_BOOLEAN,
+    [TOKEN_TYPE_BAR] = TOKEN_CATEGORY_BOOLEAN,
 };
 
 static const TokenType charToTokenType[256] = {
@@ -97,6 +102,12 @@ const char *token_type_names[] = {
     "TOKEN_TYPE_HYPHEN", "TOKEN_TYPE_ASTERISK", "TOKEN_TYPE_SLASH",
     "TOKEN_TYPE_AMPERSAND", "TOKEN_TYPE_BAR", "TOKEN_TYPE_TILDE",
     "TOKEN_TYPE_GREATER_THAN", "TOKEN_TYPE_LESS_THAN"};
+
+
+const char* token_type_to_string(TokenType type) {
+    return token_type_names[type];
+};
+
 
 /**
  * Get the TokenType corresponding to the given string.
@@ -156,7 +167,7 @@ TokenCategory get_token_category(TokenType type)
  * @param category The TokenCategory to check against.
  * @return True if the token belongs to the category, false otherwise.
  */
-bool is_token_of_category(TokenType type, TokenCategory category)
+bool is_token_category(TokenType type, TokenCategory category)
 {
     return (get_token_category(type) & category) != 0;
 }
