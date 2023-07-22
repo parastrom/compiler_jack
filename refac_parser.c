@@ -1,6 +1,13 @@
 #include "headers/refac_parser.h"
 #include <string.h>
 
+
+/**
+ * @brief Initializes a parser.
+ * 
+ * @param lexer 
+ * @return Parser* 
+ */
 Parser* init_parser(Lexer* lexer) {
     Parser* parser = malloc(sizeof(Parser));
     
@@ -32,12 +39,16 @@ void expect_and_consume(Parser* parser, TokenType expected) {
     }
 }
 
+/**
+ * @brief Parses a class.
+ * 
+ * @param parser 
+ * @return ClassNode 
+ */
+
 ClassNode* parse_class(Parser* parser) {
     
-    ClassNode* node = malloc(sizeof(ClassNode));
-    if(!node) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for ClassNode");
-    }
+    ClassNode* node = safer_malloc(sizeof(ClassNode));
 
     node->className = NULL;
     node->classVarDecs = vector_create();
@@ -80,12 +91,9 @@ ClassNode* parse_class(Parser* parser) {
  */
 ClassVarDecNode* parse_class_var_dec(Parser* parser) {
 
-    ClassVarDecNode* node = malloc(sizeof(ClassVarDecNode));
-    if(!node) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for ClassVarDecNode");
-    }
+    ClassVarDecNode* node = safer_malloc(sizeof(ClassVarDecNode));
 
-    node->varType = NULL;
+    node->varType = CVAR_NONE;
     node->varNames = vector_create();
 
     // Parse the class variable modifier
@@ -133,6 +141,8 @@ ClassVarDecNode* parse_class_var_dec(Parser* parser) {
     }
 
     expect_and_consume(parser, TOKEN_TYPE_SEMICOLON);
+
+    return node;
 }
 
 /**
@@ -143,12 +153,9 @@ ClassVarDecNode* parse_class_var_dec(Parser* parser) {
  */
 SubroutineDecNode* parse_subroutine_dec(Parser* parser) {
     
-        SubroutineDecNode* node = malloc(sizeof(SubroutineDecNode));
-        if(!node) {
-            log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for SubroutineDecNode");
-        }
+        SubroutineDecNode* node = safer_malloc(sizeof(SubroutineDecNode));
     
-        node->subroutineType = NULL;
+        node->subroutineType = SUB_NONE;
         node->returnType = NULL;
         node->subroutineName = NULL;
         node->parameters = NULL;
@@ -156,13 +163,13 @@ SubroutineDecNode* parse_subroutine_dec(Parser* parser) {
     
         // Parse the subroutine type
         if (parser->currentToken->type == TOKEN_TYPE_CONSTRUCTOR) {
-            node->subroutineType = strdup(parser->currentToken->lx);
+            node->subroutineType = CONSTRUCTOR;
             ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
         } else if (parser->currentToken->type == TOKEN_TYPE_FUNCTION) {
-            node->subroutineType = strdup(parser->currentToken->lx);
+            node->subroutineType = FUNCTION;
             ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
         } else if (parser->currentToken->type == TOKEN_TYPE_METHOD) {
-            node->subroutineType = strdup(parser->currentToken->lx);
+            node->subroutineType = METHOD;
             ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
         } else {
             log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, %s or %s, got %s", token_type_to_string(TOKEN_TYPE_CONSTRUCTOR), token_type_to_string(TOKEN_TYPE_FUNCTION), token_type_to_string(TOKEN_TYPE_METHOD), token_type_to_string(parser->currentToken->type));
@@ -173,10 +180,7 @@ SubroutineDecNode* parse_subroutine_dec(Parser* parser) {
         if (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_TYPE)) {
             node->returnType = strdup(parser->currentToken->lx);
             ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        } else if (parser->currentToken->type == TOKEN_TYPE_VOID) {
-            node->returnType = strdup(parser->currentToken->lx);
-            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        } else {
+        }else {
             log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s or %s, got %s", token_type_to_string(TOKEN_CATEGORY_TYPE), token_type_to_string(TOKEN_TYPE_VOID), token_type_to_string(parser->currentToken->type));
             parser->has_error = true;
         }
@@ -209,10 +213,7 @@ SubroutineDecNode* parse_subroutine_dec(Parser* parser) {
  */
 
 ParameterListNode* parse_parameter_list(Parser* parser) {
-    ParameterListNode* node = malloc(sizeof(ParameterListNode));
-    if(!node) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for ParameterListNode");
-    }
+    ParameterListNode* node = safer_malloc(sizeof(ParameterListNode));
 
     node->parameterTypes = vector_create();
     node->parameterNames = vector_create();
@@ -265,10 +266,7 @@ ParameterListNode* parse_parameter_list(Parser* parser) {
  * @return SubroutineBodyNode 
  */
 SubroutineBodyNode* parse_subroutine_body(Parser* parser) {
-    SubroutineBodyNode* node = malloc(sizeof(SubroutineBodyNode));
-    if(!node) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for SubroutineBodyNode");
-    }
+    SubroutineBodyNode* node = safer_malloc(sizeof(SubroutineBodyNode));
 
     node->varDecs = vector_create();
     node->statements = NULL;
@@ -297,10 +295,7 @@ SubroutineBodyNode* parse_subroutine_body(Parser* parser) {
  */
 VarDecNode* parse_var_dec(Parser* parser) {
 
-    VarDecNode* node = malloc(sizeof(VarDecNode));
-    if(!node) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for VarDecNode");
-    }
+    VarDecNode* node = safer_malloc(sizeof(VarDecNode));
 
     node->varType = NULL;
     node->varNames = vector_create();
@@ -311,7 +306,13 @@ VarDecNode* parse_var_dec(Parser* parser) {
     if (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_TYPE)) {
         node->varType = strdup(parser->currentToken->lx);
         ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-    } else {
+    } else {/**
+ * @brief The DoStatementNode represents a do sta struct {
+    NonTerminal nonTerminals[NT_NUM_NON_TERMINALS];
+} PrseTable;
+tement.
+ * It contains the subroutine name and the list of expressions.
+ */
         log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_CATEGORY_TYPE), token_type_to_string(parser->currentToken->type));
         parser->has_error = true;
     }
@@ -361,10 +362,7 @@ StatementsNode* parse_statements(Parser* parser) {
 
 StatementNode* parse_statement(Parser* parser) {
 
-    StatementNode* node = malloc(sizeof(StatementNode));
-    if(!node) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for StatementNode");
-    }
+    StatementNode* node = safer_malloc(sizeof(StatementNode));
 
     // Initialize the union
     node->data.letStatement = NULL;
@@ -372,6 +370,7 @@ StatementNode* parse_statement(Parser* parser) {
     node->data.whileStatement = NULL;
     node->data.doStatement = NULL;
     node->data.returnStatement = NULL;
+    node->statementType = STMT_NONE;
 
     if (parser->currentToken->type == TOKEN_TYPE_LET) {
         node->statementType = LET;
@@ -397,10 +396,7 @@ StatementNode* parse_statement(Parser* parser) {
 }
 
 LetStatementNode* parse_let_statement(Parser* parser) {
-    LetStatementNode* node = malloc(sizeof(LetStatementNode));
-    if(!node) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for LetStatementNode");
-    }
+    LetStatementNode* node = safer_malloc(sizeof(LetStatementNode));
 
     node->varName = NULL;
     node->indexExpression = NULL;
@@ -434,11 +430,7 @@ LetStatementNode* parse_let_statement(Parser* parser) {
 }
 
 IfStatementNode* parse_if_statement(Parser* parser) {
-    IfStatementNode* node = malloc(sizeof(IfStatementNode));
-    if(!node) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for IfStatementNode");
-    }
-
+    IfStatementNode* node = safer_malloc(sizeof(IfStatementNode));
     node->condition = NULL;
     node->ifBranch = NULL;
     node->elseBranch = NULL;
@@ -471,10 +463,7 @@ IfStatementNode* parse_if_statement(Parser* parser) {
 }
 
 WhileStatementNode* parse_while_statement(Parser* parser) {
-    WhileStatementNode* node = malloc(sizeof(WhileStatementNode));
-    if(!node) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for WhileStatementNode");
-    }
+    WhileStatementNode* node = safer_malloc(sizeof(WhileStatementNode));
 
     node->condition = NULL;
     node->body = NULL;
@@ -497,54 +486,13 @@ WhileStatementNode* parse_while_statement(Parser* parser) {
 }
 
 DoStatementNode* parse_do_statement(Parser* parser) {
-    DoStatementNode* node = malloc(sizeof(DoStatementNode));
-    
-    if(!node) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for DoStatementNode");
-    }
+    DoStatementNode* node = safer_malloc(sizeof(DoStatementNode));
 
-    node->caller = NULL;
-    node->subroutineName = NULL;
-    node->arguments = vector_create();
+    node->subroutineCall = NULL;
 
     expect_and_consume(parser, TOKEN_TYPE_DO);
 
-    // Parse the caller
-    if (parser->currentToken->type == TOKEN_TYPE_ID) {
-        node->caller = strdup(parser->currentToken->lx);
-        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-    }
-
-    // Parse the subroutine name
-    if (parser->currentToken->type == TOKEN_TYPE_PERIOD) {
-        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        if (parser->currentToken->type == TOKEN_TYPE_ID) {
-            node->subroutineName = strdup(parser->currentToken->lx);
-            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        } else {
-            log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_TYPE_ID), token_type_to_string(parser->currentToken->type));
-            parser->has_error = true;
-        }
-    } else {
-            // If there is no period after the ID, it is a subroutine call without a caller
-            node->subroutineName = node->caller;
-            node->caller = NULL;
-    }
-
-    expect_and_consume(parser, TOKEN_TYPE_OPEN_PAREN);
-
-    // Parse the expression list
-    while (parser->currentToken->type != TOKEN_TYPE_CLOSE_PAREN) {
-        ExpressionNode* expression = parse_expression(parser);
-        vector_add(&node->arguments, expression);
-
-        // If the next token is a comma, consume it
-        if (parser->currentToken->type == TOKEN_TYPE_COMMA) {
-            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        }
-    }
-
-    expect_and_consume(parser, TOKEN_TYPE_CLOSE_PAREN);
+    node->subroutineCall = parse_subroutine_call(parser);
     expect_and_consume(parser, TOKEN_TYPE_SEMICOLON);
 
     return node;
@@ -553,11 +501,7 @@ DoStatementNode* parse_do_statement(Parser* parser) {
 
 
 ReturnStatementNode* parse_return_statement(Parser* parser) {
-    ReturnStatementNode* node = malloc(sizeof(ReturnStatementNode));
-    if(!node) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for ReturnStatementNode");
-    }
-
+    ReturnStatementNode* node = safer_malloc(sizeof(ReturnStatementNode));
     node->expression = NULL;
 
     expect_and_consume(parser, TOKEN_TYPE_RETURN);
@@ -571,20 +515,77 @@ ReturnStatementNode* parse_return_statement(Parser* parser) {
     return node;
 }
 
-ExpressionNode* parse_expression(Parser* parser) {
-    ExpressionNode* node = malloc(sizeof(ExpressionNode));
-    if(!node) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for ExpressionNode");
+SubroutineCallNode *parse_subroutine_call(Parser *parser)
+{
+    SubroutineCallNode *node = safer_malloc(sizeof(SubroutineCallNode));
+
+    // Initialize the struct fields
+    node->caller = NULL;
+    node->subroutineName = NULL;
+    node->arguments = vector_create();
+
+    // Parse the caller
+    if (parser->currentToken->type == TOKEN_TYPE_ID)
+    {
+        node->caller = strdup(parser->currentToken->lx);
+        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
     }
+
+    // Parse the subroutine name
+    if (parser->currentToken->type == TOKEN_TYPE_PERIOD)
+    {
+        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+        if (parser->currentToken->type == TOKEN_TYPE_ID)
+        {
+            node->subroutineName = strdup(parser->currentToken->lx);
+            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+        }
+        else
+        {
+            log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_TYPE_ID), token_type_to_string(parser->currentToken->type));
+            parser->has_error = true;
+        }
+    }
+    else
+    {
+        // If there is no period after the ID, it is a subroutine call without a caller
+        node->subroutineName = node->caller;
+        node->caller = NULL;
+    }
+
+    expect_and_consume(parser, TOKEN_TYPE_OPEN_PAREN);
+
+    // Parse the expression list
+    while (parser->currentToken->type != TOKEN_TYPE_CLOSE_PAREN)
+    {
+        ExpressionNode *expression = parse_expression(parser);
+        vector_add(&node->arguments, expression);
+
+        // If the next token is a comma, consume it
+        if (parser->currentToken->type == TOKEN_TYPE_COMMA)
+        {
+            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+        }
+    }
+
+    expect_and_consume(parser, TOKEN_TYPE_CLOSE_PAREN);
+
+    return node;
+}
+
+ExpressionNode *parse_expression(Parser *parser)
+{
+    ExpressionNode *node = safer_malloc(sizeof(ExpressionNode));
 
     node->term = NULL;
 
     node->term = parse_term(parser);
 
-    while (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_UNARY | TOKEN_CATEGORY_ARITH 
-    | TOKEN_CATEGORY_BOOLEAN | TOKEN_CATEGORY_RELATIONAL)) {
-        Operation* op = malloc(sizeof(Operation));
-        if (!op) {
+    while (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_UNARY | TOKEN_CATEGORY_ARITH | TOKEN_CATEGORY_BOOLEAN | TOKEN_CATEGORY_RELATIONAL))
+    {
+        Operation *op = malloc(sizeof(Operation));
+        if (!op)
+        {
             log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for Operation");
         }
 
@@ -600,10 +601,9 @@ ExpressionNode* parse_expression(Parser* parser) {
 }
 
 TermNode* parse_term(Parser* parser) {
-    TermNode* node = malloc(sizeof(TermNode));
-    if(!node) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for TermNode");
-    }
+    TermNode* node = safer_malloc(sizeof(TermNode));
+
+    node->termType = TRM_NONE;
 
     TokenType type = parser->currentToken->type;
 
@@ -620,74 +620,85 @@ TermNode* parse_term(Parser* parser) {
         node->termType = KEYWORD_CONSTANT;
         node->data.keywordValue = strdup(parser->currentToken->lx);
     } else if (type == TOKEN_TYPE_ID) {
-    // The token is an identifier. It can be a varName, an array access, or a subroutine call.
-    // We need to peek the next token to differentiate between these possibilities.
-    Token* nextToken = ringbuffer_peek(parser->lexer->queue);
+        // The token is an identifier. It can be a varName, an array access, or a subroutine call.
+        // We need to peek the next token to differentiate between these possibilities.
+        Token* nextToken = ringbuffer_peek(parser->lexer->queue);
 
-    if (nextToken->type == TOKEN_TYPE_OPEN_BRACKET) {
-        // It's an array access
-        node->termType = ARRAY_ACCESS;
-        node->data.arrayAccess.arrayName = strdup(parser->currentToken->lx);
-        // Consume the '['
-        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        // Parse the expression inside the brackets
-        node->data.arrayAccess.index = parse_expression(parser);
-        // Expect and consume the ']'
-        expect_and_consume(parser, TOKEN_TYPE_CLOSE_BRACKET);
-    } else if (nextToken->type == TOKEN_TYPE_OPEN_PAREN || nextToken->type == TOKEN_TYPE_PERIOD) {
-        // It's a subroutine call
-        node->termType = SUBROUTINE_CALL;
-        // Assuming parse_subroutine_call takes care of consuming the tokens and returns a filled struct
-        node->data.subroutineCall = parse_subroutine_call(parser);
-    } else if (type == TOKEN_TYPE_ID) {
-        // It's just a varName or a className.varName
-        node->termType = VAR_TERM;
-        node->data.varTerm.varName = strdup(parser->currentToken->lx);
-        // Consume the varName
-        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        nextToken = ringbuffer_peek(parser->lexer->queue);
-        if (nextToken->type == TOKEN_TYPE_PERIOD) {
-            // It's a className.varName
-            node->data.varTerm.className = node->data.varTerm.varName;
-            // Consume the '.'
+        if (nextToken->type == TOKEN_TYPE_OPEN_BRACKET) {
+            // It's an array access
+            node->termType = ARRAY_ACCESS;
+            node->data.arrayAccess.arrayName = strdup(parser->currentToken->lx);
+            // Consume the '['
             ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-            // Parse the varName
-            if (parser->currentToken->type == TOKEN_TYPE_ID) {
-                node->data.varTerm.varName = strdup(parser->currentToken->lx);
-            } else {
-                log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_TYPE_ID), token_type_to_string(parser->currentToken->type));
-                parser->has_error = true;
-            }
-        } else {
-            // It's just a varName
-            node->data.varTerm.className = NULL;
-        }
-    } else if (type == TOKEN_TYPE_OPEN_PAREN) {
-        // It's an expression inside parentheses
-        node->termType = EXPRESSION;
-        // Consume the '('
-        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        // Parse the expression inside the parentheses
-        node->data.expression = parse_expression(parser);
-        // Expect and consume the ')'
-        expect_and_consume(parser, TOKEN_TYPE_CLOSE_PAREN);
-    } else if (type == TOKEN_TYPE_HYPHEN || type == TOKEN_TYPE_TILDE) {
-        // It's a unary operation
-        node->termType = UNARY_OP;
-        node->data.unaryOp.unaryOp = parser->currentToken->lx[0];
-        // Consume the unary operator
-        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        // Parse the term
-        node->data.unaryOp.term = parse_term(parser);
+            // Parse the expression inside the brackets
+            node->data.arrayAccess.index = parse_expression(parser);
+            // Expect and consume the ']'
+            expect_and_consume(parser, TOKEN_TYPE_CLOSE_BRACKET);
+        } else if (nextToken->type == TOKEN_TYPE_OPEN_PAREN || nextToken->type == TOKEN_TYPE_PERIOD) {
+            // It's a subroutine call
+            node->termType = SUBROUTINE_CALL;
 
-    } else {
-        log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Unexpected token in term: %s", token_type_to_string(parser->currentToken->type));
-        parser->has_error = true;
+            node->data.subroutineCall = parse_subroutine_call(parser);
+        } else if (type == TOKEN_TYPE_ID) {
+            // It's just a varName or a className.varName
+            node->termType = VAR_TERM;
+            node->data.varTerm.varName = strdup(parser->currentToken->lx);
+            // Consume the varName
+            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+            nextToken = ringbuffer_peek(parser->lexer->queue);
+            if (nextToken->type == TOKEN_TYPE_PERIOD) {
+                // It's a className.varName
+                node->data.varTerm.className = node->data.varTerm.varName;
+                // Consume the '.'
+                ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+                // Parse the varName
+                if (parser->currentToken->type == TOKEN_TYPE_ID) {
+                    node->data.varTerm.varName = strdup(parser->currentToken->lx);
+                } else {
+                    log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_TYPE_ID), token_type_to_string(parser->currentToken->type));
+                    parser->has_error = true;
+                }
+            } else {
+                // It's just a varName
+                node->data.varTerm.className = NULL;
+            }
+        } else if (type == TOKEN_TYPE_OPEN_PAREN) {
+            // It's an expression inside parentheses
+            node->termType = EXPRESSION;
+            // Consume the '('
+            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+            // Parse the expression inside the parentheses
+            node->data.expression = parse_expression(parser);
+            // Expect and consume the ')'
+            expect_and_consume(parser, TOKEN_TYPE_CLOSE_PAREN);
+        } else if (type == TOKEN_TYPE_HYPHEN || type == TOKEN_TYPE_TILDE) {
+            // It's a unary operation
+            node->termType = UNARY_OP;
+            node->data.unaryOp.unaryOp = parser->currentToken->lx[0];
+            // Consume the unary operator
+            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+            // Parse the term
+            node->data.unaryOp.term = parse_term(parser);
+
+        } else {
+            log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Unexpected token in term: %s", token_type_to_string(parser->currentToken->type));
+            parser->has_error = true;
+        }
+
+        // Move to the next token once we're done parsing the current one
+        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
     }
 
-    // Move to the next token once we're done parsing the current one
-    ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-
     return node;
+
 }
 
+
+void* safer_malloc(size_t size) {
+    void* ptr = malloc(size);
+    if (!ptr) {
+        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory");
+        exit(EXIT_FAILURE);
+    }
+    return ptr;
+}

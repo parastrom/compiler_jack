@@ -2,8 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
-#include "headers/refac_lexer.h"
-#include "headers/logger.h"
+#include "headers/refac_parser.h"
 
 #ifndef JACK_FILES_DIR
     #define JACK_FILES_DIR "./jack_files"  // Fallback if JACK_FILES_DIR is not defined in CMakeLists.txt
@@ -41,14 +40,17 @@ int main() {
             continue;
         }
 
-        log_message(LOG_LEVEL_INFO, "Printing tokens from: %s\n", filePath);
-        Token* token = NULL;
-        while (ringbuffer_peek(lexer->queue) != NULL) {
-            ringbuffer_pop(lexer->queue, &token);
-            //fmt(token);
-            token = NULL;
-            //printf("\n");
+        Parser* parser = init_parser(lexer);
+        ClassNode const* classNode = parse_class(parser);
+
+        // Print the AST
+        printf("AST for file: %s\n", filePath);
+        if(classNode != NULL) {
+            log_message(LOG_LEVEL_INFO, "AST for file: %s\n", filePath);
+        } else {
+            printf("Failed to parse file: %s\n", filePath);
         }
+
 
         destroy_lexer(lexer);
     }
