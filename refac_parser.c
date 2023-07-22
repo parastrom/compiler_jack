@@ -1,5 +1,6 @@
 #include "headers/refac_parser.h"
 #include <string.h>
+#include <signal.h>
 
 
 /**
@@ -50,6 +51,8 @@ ClassNode* parse_class(Parser* parser) {
     
     ClassNode* node = safer_malloc(sizeof(ClassNode));
 
+    log_message(LOG_LEVEL_INFO, "Parsing class\n");
+
     node->className = NULL;
     node->classVarDecs = vector_create();
     node->subroutineDecs = vector_create();
@@ -71,10 +74,10 @@ ClassNode* parse_class(Parser* parser) {
     while (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_CLASS_VAR | TOKEN_CATEGORY_SUBROUTINE_DEC)) {
         if (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_CLASS_VAR)) {
             ClassVarDecNode* classVarDec = parse_class_var_dec(parser);
-            vector_add(&node->classVarDecs, classVarDec);
+            vector_push(node->classVarDecs, classVarDec);
         } else if (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_SUBROUTINE_DEC)) {
             SubroutineDecNode* subroutineDec = parse_subroutine_dec(parser);
-            vector_add(&node->subroutineDecs, subroutineDec);
+            vector_push(node->subroutineDecs, subroutineDec);
         }
     }
 
@@ -92,6 +95,8 @@ ClassNode* parse_class(Parser* parser) {
 ClassVarDecNode* parse_class_var_dec(Parser* parser) {
 
     ClassVarDecNode* node = safer_malloc(sizeof(ClassVarDecNode));
+
+    log_message(LOG_LEVEL_INFO, "Parsing class variable declaration. Current Token : %s, Line : %d\n", token_type_to_string(parser->currentToken->type), parser->currentToken->line);
 
     node->varType = CVAR_NONE;
     node->varNames = vector_create();
@@ -120,7 +125,7 @@ ClassVarDecNode* parse_class_var_dec(Parser* parser) {
 
     // Parse the first variable name
     if (parser->currentToken->type == TOKEN_TYPE_ID) {
-        vector_add(&node->varNames, strdup(parser->currentToken->lx));
+        vector_push(node->varNames, strdup(parser->currentToken->lx));
         ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
     } else {
         log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_TYPE_ID), token_type_to_string(parser->currentToken->type));
@@ -132,7 +137,7 @@ ClassVarDecNode* parse_class_var_dec(Parser* parser) {
     while (parser->currentToken->type == TOKEN_TYPE_COMMA) {
         ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
         if (parser->currentToken->type == TOKEN_TYPE_ID) {
-            vector_add(&node->varNames, strdup(parser->currentToken->lx));
+            vector_push(node->varNames, strdup(parser->currentToken->lx));
             ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
         } else {
             log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_TYPE_ID), token_type_to_string(parser->currentToken->type));
@@ -153,56 +158,54 @@ ClassVarDecNode* parse_class_var_dec(Parser* parser) {
  */
 SubroutineDecNode* parse_subroutine_dec(Parser* parser) {
     
-        SubroutineDecNode* node = safer_malloc(sizeof(SubroutineDecNode));
+    SubroutineDecNode* node = safer_malloc(sizeof(SubroutineDecNode));
+
+    log_message(LOG_LEVEL_INFO, "Parsing subroutine declaration. Current Token : %s, Line : %d\n", token_type_to_string(parser->currentToken->type), parser->currentToken->line);
+
+    node->subroutineType = SUB_NONE;
+    node->returnType = NULL;
+    node->subroutineName = NULL;
+    node->parameters = NULL;
+    node->body = NULL;
     
-        node->subroutineType = SUB_NONE;
-        node->returnType = NULL;
-        node->subroutineName = NULL;
-        node->parameters = NULL;
-        node->body = NULL;
-    
-        // Parse the subroutine type
-        if (parser->currentToken->type == TOKEN_TYPE_CONSTRUCTOR) {
-            node->subroutineType = CONSTRUCTOR;
-            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        } else if (parser->currentToken->type == TOKEN_TYPE_FUNCTION) {
-            node->subroutineType = FUNCTION;
-            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        } else if (parser->currentToken->type == TOKEN_TYPE_METHOD) {
-            node->subroutineType = METHOD;
-            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        } else {
-            log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, %s or %s, got %s", token_type_to_string(TOKEN_TYPE_CONSTRUCTOR), token_type_to_string(TOKEN_TYPE_FUNCTION), token_type_to_string(TOKEN_TYPE_METHOD), token_type_to_string(parser->currentToken->type));
-            parser->has_error = true;
-        }
-    
-        // Parse the return type
-        if (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_TYPE)) {
-            node->returnType = strdup(parser->currentToken->lx);
-            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        }else {
-            log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s or %s, got %s", token_type_to_string(TOKEN_CATEGORY_TYPE), token_type_to_string(TOKEN_TYPE_VOID), token_type_to_string(parser->currentToken->type));
-            parser->has_error = true;
-        }
+    // Parse the subroutine type
+    if (parser->currentToken->type == TOKEN_TYPE_CONSTRUCTOR) {
+        node->subroutineType = CONSTRUCTOR;
+        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+    } else if (parser->currentToken->type == TOKEN_TYPE_FUNCTION) {
+        node->subroutineType = FUNCTION;
+        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+    } else if (parser->currentToken->type == TOKEN_TYPE_METHOD) {
+        node->subroutineType = METHOD;
+        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+    } else {
+        log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, %s or %s, got %s", token_type_to_string(TOKEN_TYPE_CONSTRUCTOR), token_type_to_string(TOKEN_TYPE_FUNCTION), token_type_to_string(TOKEN_TYPE_METHOD), token_type_to_string(parser->currentToken->type));
+        parser->has_error = true;
+    }
 
-        // Parse the subroutine name
-        if (parser->currentToken->type == TOKEN_TYPE_ID) {
-            node->subroutineName = strdup(parser->currentToken->lx);
-            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        } else {
-            log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_TYPE_ID), token_type_to_string(parser->currentToken->type));
-            parser->has_error = true;
-        }
-
-        expect_and_consume(parser, TOKEN_TYPE_OPEN_PAREN);
-        // Parse the parameter list
-        node->parameters = parse_parameter_list(parser);
-
-        expect_and_consume(parser, TOKEN_TYPE_CLOSE_PAREN);
-        // Parse the subroutine body
-        node->body = parse_subroutine_body(parser);
-
-        return node;
+    // Parse the return type
+    if (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_TYPE)) {
+        node->returnType = strdup(parser->currentToken->lx);
+        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+    }else {
+        log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s or %s, got %s", token_type_to_string(TOKEN_CATEGORY_TYPE), token_type_to_string(TOKEN_TYPE_VOID), token_type_to_string(parser->currentToken->type));
+        parser->has_error = true;
+    }
+    // Parse the subroutine name
+    if (parser->currentToken->type == TOKEN_TYPE_ID) {
+        node->subroutineName = strdup(parser->currentToken->lx);
+        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+    } else {
+        log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_TYPE_ID), token_type_to_string(parser->currentToken->type));
+        parser->has_error = true;
+    }
+    expect_and_consume(parser, TOKEN_TYPE_OPEN_PAREN);
+    // Parse the parameter list
+    node->parameters = parse_parameter_list(parser);
+    expect_and_consume(parser, TOKEN_TYPE_CLOSE_PAREN);
+    // Parse the subroutine body
+    node->body = parse_subroutine_body(parser);
+    return node;
 }
 
 /**
@@ -214,46 +217,48 @@ SubroutineDecNode* parse_subroutine_dec(Parser* parser) {
 
 ParameterListNode* parse_parameter_list(Parser* parser) {
     ParameterListNode* node = safer_malloc(sizeof(ParameterListNode));
-
     node->parameterTypes = vector_create();
     node->parameterNames = vector_create();
 
+    log_message(LOG_LEVEL_INFO, "Parsing parameter list. Current Token : %s, Line : %d\n", token_type_to_string(parser->currentToken->type), parser->currentToken->line);
+   
     // Parse the first parameter
     if (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_TYPE)) {
-        vector_add(&node->parameterTypes, strdup(parser->currentToken->lx));
-        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-    } else {
-        log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_CATEGORY_TYPE), token_type_to_string(parser->currentToken->type));
-        parser->has_error = true;
-    }
 
-    if (parser->currentToken->type == TOKEN_TYPE_ID) {
-        vector_add(&node->parameterNames, strdup(parser->currentToken->lx));
-        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-    } else {
-        log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_TYPE_ID), token_type_to_string(parser->currentToken->type));
-        parser->has_error = true;
-    }
+        node->parameterTypes = vector_create();
+        node->parameterNames = vector_create();
 
-    // Parse any additional parameters
-    while (parser->currentToken->type == TOKEN_TYPE_COMMA) {
+        vector_push(node->parameterTypes, strdup(parser->currentToken->lx));
         ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        if (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_TYPE)) {
-            vector_add(&node->parameterTypes, strdup(parser->currentToken->lx));
-            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
-        } else {
-            log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_CATEGORY_TYPE), token_type_to_string(parser->currentToken->type));
-            parser->has_error = true;
-        }
 
-        if (parser->currentToken->type == TOKEN_TYPE_ID) {
-            vector_add(&node->parameterNames, strdup(parser->currentToken->lx));
+         if (parser->currentToken->type == TOKEN_TYPE_ID) {
+            vector_push(node->parameterNames, strdup(parser->currentToken->lx));
             ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
         } else {
             log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_TYPE_ID), token_type_to_string(parser->currentToken->type));
             parser->has_error = true;
         }
-        
+
+        // Parse any additional parameters
+        while (parser->currentToken->type == TOKEN_TYPE_COMMA) {
+            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+            if (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_TYPE)) {
+                vector_push(node->parameterTypes, strdup(parser->currentToken->lx));
+                ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+            } else {
+            
+                log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_CATEGORY_TYPE), token_type_to_string(parser->currentToken->type));
+                parser->has_error = true;
+            }
+            if (parser->currentToken->type == TOKEN_TYPE_ID) {
+                vector_push(node->parameterNames, strdup(parser->currentToken->lx));
+                ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+            } else {
+                log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_TYPE_ID), token_type_to_string(parser->currentToken->type));
+                parser->has_error = true;
+            }
+
+        }
     }
 
     return node;
@@ -276,7 +281,7 @@ SubroutineBodyNode* parse_subroutine_body(Parser* parser) {
     // Parse any variable declarations
     while (parser->currentToken->type == TOKEN_TYPE_VAR) {
         VarDecNode* varDec = parse_var_dec(parser);
-        vector_add(&node->varDecs, varDec);
+        vector_push(node->varDecs, varDec);
     }
 
     // Parse the statements
@@ -319,7 +324,7 @@ tement.
 
     // Parse the first variable name
     if (parser->currentToken->type == TOKEN_TYPE_ID) {
-        vector_add(&node->varNames, strdup(parser->currentToken->lx));
+        vector_push(node->varNames, strdup(parser->currentToken->lx));
         ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
     } else {
         log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_TYPE_ID), token_type_to_string(parser->currentToken->type));
@@ -330,7 +335,7 @@ tement.
     while (parser->currentToken->type == TOKEN_TYPE_COMMA) {
         ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
         if (parser->currentToken->type == TOKEN_TYPE_ID) {
-            vector_add(&node->varNames, strdup(parser->currentToken->lx));
+            vector_push(node->varNames, strdup(parser->currentToken->lx));
             ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
         } else {
             log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Expected token %s, got %s", token_type_to_string(TOKEN_TYPE_ID), token_type_to_string(parser->currentToken->type));
@@ -354,7 +359,7 @@ StatementsNode* parse_statements(Parser* parser) {
     // Parse any statements
     while (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_STATEMENT)) {
         StatementNode* statement = parse_statement(parser);
-        vector_add(&node->statements, statement);
+        vector_push(node->statements, statement);
     }
 
     return node;
@@ -559,7 +564,7 @@ SubroutineCallNode *parse_subroutine_call(Parser *parser)
     while (parser->currentToken->type != TOKEN_TYPE_CLOSE_PAREN)
     {
         ExpressionNode *expression = parse_expression(parser);
-        vector_add(&node->arguments, expression);
+        vector_push(node->arguments, expression);
 
         // If the next token is a comma, consume it
         if (parser->currentToken->type == TOKEN_TYPE_COMMA)
@@ -578,23 +583,19 @@ ExpressionNode *parse_expression(Parser *parser)
     ExpressionNode *node = safer_malloc(sizeof(ExpressionNode));
 
     node->term = NULL;
-
+    node->operations = vector_create();
     node->term = parse_term(parser);
 
     while (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_UNARY | TOKEN_CATEGORY_ARITH | TOKEN_CATEGORY_BOOLEAN | TOKEN_CATEGORY_RELATIONAL))
     {
-        Operation *op = malloc(sizeof(Operation));
-        if (!op)
-        {
-            log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for Operation");
-        }
+        Operation *op = safer_malloc(sizeof(Operation));
 
         op->op = parser->currentToken->lx[0]; // Assuming lx is the string representation of the token
         ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
 
         op->term = parse_term(parser);
 
-        vector_add(&node->operations, op);
+        vector_push(node->operations, op);
     }
 
     return node;
@@ -610,7 +611,7 @@ TermNode* parse_term(Parser* parser) {
     if (type == TOKEN_TYPE_NUM) {
         // Parse an integer constant
         node->termType = INTEGER_CONSTANT;
-        node->data.intValue = atoi(parser->currentToken->lx); // Assuming lx contains the string representation of the number
+        node->data.intValue = atoi(parser->currentToken->lx); // lx contains the string representation of the number
     } else if (type == TOKEN_TYPE_STRING) {
         // Parse a string constant
         node->termType = STRING_CONSTANT;
@@ -684,10 +685,10 @@ TermNode* parse_term(Parser* parser) {
             log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Unexpected token in term: %s", token_type_to_string(parser->currentToken->type));
             parser->has_error = true;
         }
-
-        // Move to the next token once we're done parsing the current one
-        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
     }
+
+     // Move to the next token once we're done parsing the current one
+    ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
 
     return node;
 

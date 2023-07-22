@@ -1,4 +1,4 @@
-#include "vec.h"
+#include "vector.h"
 
 typedef struct ASTNode ASTNode;
 
@@ -22,15 +22,6 @@ typedef struct TermNode TermNode;
 typedef struct Operation Operation;
 typedef struct VarTerm VarTerm;
 typedef struct SubroutineCallNode SubroutineCallNode;
-
-// Define the vector types for each node type
-typedef ClassNode** vec_ClassNode;
-typedef ClassVarDecNode** vec_ClassVarDecNode;
-typedef SubroutineDecNode** vec_SubroutineDecNode;
-typedef VarDecNode** vec_VarDecNode;
-typedef StatementNode** vec_StatementNode;
-typedef ExpressionNode** vec_ExpressionNode;
-typedef Operation** vec_Operation;
 
 struct ASTNode {
     enum{
@@ -83,7 +74,7 @@ struct ASTNode {
     It contains a vector of ClassNodes.
 */
 struct ProgramNode {
-    vec_ClassNode classes;
+    vector classes;
 };
 
 
@@ -93,8 +84,8 @@ struct ProgramNode {
 */
 struct ClassNode {
     char* className;
-    vec_ClassVarDecNode classVarDecs;
-    vec_SubroutineDecNode subroutineDecs;
+    vector classVarDecs;
+    vector subroutineDecs;
 };
 
 
@@ -105,7 +96,7 @@ struct ClassNode {
 struct ClassVarDecNode {
     enum { CVAR_NONE, STATIC, FIELD } classVarModifier;
     char* varType;
-    vec_char varNames;
+    vector varNames;
 };
 
 //Write a comment for each node type describing what it represents
@@ -130,8 +121,8 @@ struct SubroutineDecNode {
  * 
  */
 struct ParameterListNode {
-    vec_char parameterTypes;
-    vec_char parameterNames;
+    vector parameterTypes;
+    vector parameterNames;
 };
 
 /**
@@ -139,7 +130,7 @@ struct ParameterListNode {
  *  It contains a vector of variable declarations and a list of statements.
  */
 struct SubroutineBodyNode {
-    vec_VarDecNode varDecs;
+    vector varDecs;
     StatementsNode* statements;
 };
 
@@ -149,7 +140,7 @@ struct SubroutineBodyNode {
  */
 struct VarDecNode {
     char* varType;
-    vec_char varNames;
+    vector varNames;
 };
 
 /**
@@ -157,7 +148,7 @@ struct VarDecNode {
  * It contains a vector of StatementNodes.
  */
 struct StatementsNode {
-    vec_StatementNode statements;
+    vector statements;
 };
 
 /**
@@ -205,11 +196,8 @@ struct WhileStatementNode {
 };
 
 /**
- * @brief The DoStatementNode represents a do sta struct {
-    NonTerminal nonTerminals[NT_NUM_NON_TERMINALS];
-} PrseTable;
-tement.
- * It contains the subroutine name and the list of expressions.
+ * @brief The DoStatementNode represents a do statement.
+ * It contains the subroutine call.
  */
 struct DoStatementNode {
     SubroutineCallNode* subroutineCall;
@@ -230,7 +218,7 @@ struct ReturnStatementNode {
 struct SubroutineCallNode {
     char* caller; // This could be a varName or className. NULL if not present.
     char* subroutineName;
-    vec_ExpressionNode arguments; // vector of ExpressionNode pointers - args
+    vector arguments; // vector of ExpressionNode pointers - args
 };
 
 /**
@@ -239,7 +227,7 @@ struct SubroutineCallNode {
  */
 struct ExpressionNode {
     TermNode* term;
-    vec_Operation operations;
+    vector operations;
 };
 
 /**

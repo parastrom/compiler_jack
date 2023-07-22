@@ -51,8 +51,8 @@ int main() {
             printf("Failed to parse file: %s\n", filePath);
         }
 
-
-        destroy_lexer(lexer);
+        break;
+        //destroy_lexer(lexer);
     }
 
     // Close the directory

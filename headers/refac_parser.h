@@ -30,7 +30,6 @@ ReturnStatementNode* parse_return_statement(Parser* parser);
 SubroutineCallNode* parse_subroutine_call(Parser* parser);
 ExpressionNode* parse_expression(Parser* parser);
 TermNode* parse_term(Parser* parser);
-Operation* parse_operation(Parser* parser);
 
 void* safer_malloc(size_t size);
 void safer_free(void** ptr);
@@ -51,7 +50,6 @@ void destroy_return_statement(ReturnStatementNode* return_statement);
 void destroy_subroutine_call(SubroutineCallNode* subroutine_call);
 void destroy_expression(ExpressionNode* expression);
 void destroy_term(TermNode* term);
-void destroy_operation(Operation* operation);
 
 void destroy_parser(Parser* parser);
 
