@@ -23,6 +23,26 @@ typedef struct Operation Operation;
 typedef struct VarTerm VarTerm;
 typedef struct SubroutineCallNode SubroutineCallNode;
 
+typedef struct {
+    void (*visit_program_node)(ProgramNode*);
+    void (*visit_class_node)(ClassNode*);
+    void (*visit_class_var_dec_node)(ClassVarDecNode*);
+    void (*visit_subroutine_dec_node)(SubroutineDecNode*);
+    void (*visit_parameter_list_node)(ParameterListNode*);
+    void (*visit_subroutine_body_node)(SubroutineBodyNode*);
+    void (*visit_var_dec_node)(VarDecNode*);
+    void (*visit_statements_node)(StatementsNode*);
+    void (*visit_statement_node)(StatementNode*);
+    void (*visit_let_statement_node)(LetStatementNode*);
+    void (*visit_if_statement_node)(IfStatementNode*);
+    void (*visit_while_statement_node)(WhileStatementNode*);
+    void (*visit_do_statement_node)(DoStatementNode*);
+    void (*visit_return_statement_node)(ReturnStatementNode*);
+    void (*visit_subroutine_call_node)(SubroutineCallNode*);
+    void (*visit_expression_node)(ExpressionNode*);
+    void (*visit_term_node)(TermNode*);
+} ASTVisitor;
+
 struct ASTNode {
     enum{
         NODE_PROGRAM,
@@ -273,3 +293,20 @@ struct TermNode {
         } unaryOp;
     } data;
 };
+
+void class_node_accept(ClassNode* node, ASTVisitor* visitor);
+void class_var_dec_node_accept(ClassVarDecNode* node, ASTVisitor* visitor);
+void subroutine_dec_node_accept(SubroutineDecNode* node, ASTVisitor* visitor);
+void parameter_list_node_accept(ParameterListNode* node, ASTVisitor* visitor);
+void subroutine_body_node_accept(SubroutineBodyNode* node, ASTVisitor* visitor);
+void var_dec_node_accept(VarDecNode* node, ASTVisitor* visitor);
+void statements_node_accept(StatementsNode* node, ASTVisitor* visitor);
+void statement_node_accept(StatementNode* node, ASTVisitor* visitor);
+void let_statement_node_accept(LetStatementNode* node, ASTVisitor* visitor);
+void if_statement_node_accept(IfStatementNode* node, ASTVisitor* visitor);
+void while_statement_node_accept(WhileStatementNode* node, ASTVisitor* visitor);
+void do_statement_node_accept(DoStatementNode* node, ASTVisitor* visitor);
+void return_statement_node_accept(ReturnStatementNode* node, ASTVisitor* visitor);
+void subroutine_call_node_accept(SubroutineCallNode* node, ASTVisitor* visitor);
+void expression_node_accept(ExpressionNode* node, ASTVisitor* visitor);
+void term_node_accept(TermNode* node, ASTVisitor* visitor);

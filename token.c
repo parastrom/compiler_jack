@@ -208,6 +208,25 @@ void fmt(const Token *token)
 }
 
 /**
+ * @brief Formats a token into a string.
+ * 
+ * @param token 
+ * @return char* 
+ */
+
+char* token_to_string(const Token *token)
+{
+    // Assuming the lexeme won't be more than 100 characters.
+    // Please adjust this size as per your needs.
+    static char buffer[200];
+    snprintf(buffer, sizeof(buffer), "Token {  type: %-30s Lexeme: %-10s Line: %d }",
+           token_type_names[token->type],
+           token->lx,
+           token->line);
+    return buffer;
+}
+
+/**
  * Create a new token. Takes ownership of the 'lx' string,
  *
  * @param type The type of the token.

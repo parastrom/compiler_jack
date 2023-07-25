@@ -384,9 +384,9 @@ ErrorCode process_input(Lexer* lexer) {
         }
 
         state = next_state;  // update state after generating tokens
-
+        
         // If the current character is a symbol and we are not in a string or comment, create a new token for it
-        if (eq_class == C_symbol && state != IN_STRING && !in_comment) {
+        if ((eq_class == C_symbol || eq_class == C_star) && state != IN_STRING && !in_comment) {
             create_token(lexer, IN_SYMBOL, lexer->position, 1, line);
             token_count++;
             token_start = lexer->position + 1;

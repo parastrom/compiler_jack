@@ -219,8 +219,6 @@ ParameterListNode* parse_parameter_list(Parser* parser) {
     ParameterListNode* node = safer_malloc(sizeof(ParameterListNode));
     node->parameterTypes = vector_create();
     node->parameterNames = vector_create();
-
-    log_message(LOG_LEVEL_INFO, "Parsing parameter list. Current Token : %s, Line : %d\n", token_type_to_string(parser->currentToken->type), parser->currentToken->line);
    
     // Parse the first parameter
     if (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_TYPE)) {
@@ -608,18 +606,23 @@ TermNode* parse_term(Parser* parser) {
 
     TokenType type = parser->currentToken->type;
 
+    log_message(LOG_LEVEL_INFO, "Parsing term. Current Token : %s\n", token_to_string(parser->currentToken));
+
     if (type == TOKEN_TYPE_NUM) {
         // Parse an integer constant
         node->termType = INTEGER_CONSTANT;
         node->data.intValue = atoi(parser->currentToken->lx); // lx contains the string representation of the number
+        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
     } else if (type == TOKEN_TYPE_STRING) {
         // Parse a string constant
         node->termType = STRING_CONSTANT;
         node->data.stringValue = strdup(parser->currentToken->lx);
+        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
     } else if (type == TOKEN_TYPE_TRUE || type == TOKEN_TYPE_FALSE || type == TOKEN_TYPE_NULL || type == TOKEN_TYPE_THIS) {
         // Parse a keyword constant
         node->termType = KEYWORD_CONSTANT;
         node->data.keywordValue = strdup(parser->currentToken->lx);
+        ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
     } else if (type == TOKEN_TYPE_ID) {
         // The token is an identifier. It can be a varName, an array access, or a subroutine call.
         // We need to peek the next token to differentiate between these possibilities.
@@ -629,6 +632,9 @@ TermNode* parse_term(Parser* parser) {
             // It's an array access
             node->termType = ARRAY_ACCESS;
             node->data.arrayAccess.arrayName = strdup(parser->currentToken->lx);
+
+            //Consume the arrayName
+            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
             // Consume the '['
             ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
             // Parse the expression inside the brackets
@@ -640,7 +646,7 @@ TermNode* parse_term(Parser* parser) {
             node->termType = SUBROUTINE_CALL;
 
             node->data.subroutineCall = parse_subroutine_call(parser);
-        } else if (type == TOKEN_TYPE_ID) {
+        } else {
             // It's just a varName or a className.varName
             node->termType = VAR_TERM;
             node->data.varTerm.varName = strdup(parser->currentToken->lx);
@@ -660,10 +666,11 @@ TermNode* parse_term(Parser* parser) {
                     parser->has_error = true;
                 }
             } else {
-                // It's just a varName
+                // It's just a varName.
                 node->data.varTerm.className = NULL;
             }
-        } else if (type == TOKEN_TYPE_OPEN_PAREN) {
+        } 
+    } else if (type == TOKEN_TYPE_OPEN_PAREN) {
             // It's an expression inside parentheses
             node->termType = EXPRESSION;
             // Consume the '('
@@ -684,13 +691,15 @@ TermNode* parse_term(Parser* parser) {
         } else {
             log_error(ERROR_PARSER_UNEXPECTED_TOKEN, __FILE__, __LINE__, "Unexpected token in term: %s", token_type_to_string(parser->currentToken->type));
             parser->has_error = true;
+            node->termType = TRM_NONE;
+            ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+            return NULL;
         }
-    }
 
-     // Move to the next token once we're done parsing the current one
-    ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
+    // Move to the next token once we're done parsing the current one
+    //ringbuffer_pop(parser->lexer->queue, &parser->currentToken);
 
-    return node;
+      return node;
 
 }
 

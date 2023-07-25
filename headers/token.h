@@ -106,5 +106,6 @@ TokenType get_token_type(const Token *token);
 char *get_token_lx(const Token *token);
 
 void fmt(const Token *token);
+char* token_to_string(const Token *token);
 
 #endif // TOKEN_H
