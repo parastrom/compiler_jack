@@ -1,4 +1,5 @@
 #include "vector.h"
+#include "symbol.h"
 
 typedef struct ASTNode ASTNode;
 
@@ -41,6 +42,7 @@ typedef struct {
     void (*visit_subroutine_call_node)(SubroutineCallNode*);
     void (*visit_expression_node)(ExpressionNode*);
     void (*visit_term_node)(TermNode*);
+    SymbolTable* currentTable;
 } ASTVisitor;
 
 struct ASTNode {

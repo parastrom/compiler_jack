@@ -2,12 +2,11 @@
 #include <string.h>
 #include "headers/symbol.h"
 
-Symbol* symbol_new(char* name, char* type, Kind kind, int index) {
+Symbol* symbol_new(const char* name, const char* type, Kind kind) {
     Symbol* symbol = malloc(sizeof(Symbol));
     symbol->name = strdup(name);
     symbol->type = strdup(type);
     symbol->kind = kind;
-    symbol->index = index;
     return symbol;
 }
 
@@ -28,6 +27,13 @@ SymbolTable* create_table(Scope scope, SymbolTable* parent) {
     table->symbols = vector_create();
 
     return table;
+}
+
+void symbol_table_add(SymbolTable* table, const char* name, const char* type, Kind kind) {
+    Symbol* symbol = symbol_new(name, type, kind);
+    symbol->index = table->counts[kind];
+    table->counts[kind]++;
+    vector_push(table->symbols, symbol);
 }
 
 void destroy_table(SymbolTable* table) {

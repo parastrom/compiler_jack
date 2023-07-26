@@ -1,6 +1,5 @@
 #ifndef SYMBOL_H
 #define SYMBOL_H
-
 #include "vector.h"
 #include "headers/safer.h"
 
@@ -12,6 +11,10 @@ typedef enum {
     KIND_FIELD,
     KIND_ARG,
     KIND_VAR,
+    KIND_CLASS,
+    KIND_CONSTRUCTOR,
+    KIND_FUNCTION,
+    KIND_METHOD,
     KIND_NONE
 } Kind;
 
@@ -30,6 +33,13 @@ struct Symbol {
     int index;
 };
 
+struct Symbol {
+    char* name;
+    char* type;
+    Kind kind;
+    int index;
+};
+
 struct SymbolTable {
     vector symbols;
     int counts[KIND_NONE];
@@ -44,7 +54,7 @@ int varCount(SymbolTable *table, Kind kind);
 Kind kindOf(SymbolTable *table, char *name);
 char* typeOf(SymbolTable *table, char *name);
 int indexOf(SymbolTable *table, char *name);
-Symbol* symbol_new(char *name, char *type, Kind kind, int index);
+Symbol* symbol_new(char *name, char *type, Kind kind);
 void symbol_table_add(SymbolTable *table, const char* name, const char* type, Kind kind);
 void destroy_symbol(Symbol *symbol);
 
