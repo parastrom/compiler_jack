@@ -1,27 +1,106 @@
-#include "vector.h"
 #include "symbol.h"
 
 typedef struct ASTNode ASTNode;
 
-// Forward declarations for each node type
+/*
+    The ProgramNode is the root node of the AST.
+    It contains a vector of ClassNodes.
+*/
 typedef struct ProgramNode ProgramNode;
+/**
+*   @brief The ClassNode represents a class declaration.
+*   It contains a vector of ClassVarDecNodes and a vector of SubroutineDecNodes.
+*/
 typedef struct ClassNode ClassNode;
+/**
+ * @brief The ClassVarDecNode represents a class variable declaration.
+ * It contains a vector of variable names, the variable type, and the class variable modifier.
+ */
+
 typedef struct ClassVarDecNode ClassVarDecNode;
+/**
+ * @brief The SubroutineDecNode represents a subroutine declaration.
+ * It contains a list of parameters, the subroutine body, and the subroutine type.
+ */
+
 typedef struct SubroutineDecNode SubroutineDecNode;
+/**
+ * @brief The ParameterListNode represents a list of parameters.
+ * It contains a vector of parameter types and a vector of parameter names.
+ * 
+ */
 typedef struct ParameterListNode ParameterListNode;
+/**
+ * @brief The SubroutineBodyNode represents the body of a subroutine.
+ *  It contains a vector of variable declarations and a list of statements.
+ * 
+ */
 typedef struct SubroutineBodyNode SubroutineBodyNode;
+/**
+ * @brief The VarDecNode represents a variable declaration.
+ * It contains a vector of variable names and the variable type.
+ */
 typedef struct VarDecNode VarDecNode;
+/**
+ * @brief The StatementsNode represents a list of statements.
+ * It contains a vector of StatementNodes.
+ */
 typedef struct StatementsNode StatementsNode;
+/**
+ * @brief The StatementNode represents a statement.
+ * It contains a union of the different types of statements.
+ */
 typedef struct StatementNode StatementNode;
+/**
+ * @brief The LetStatementNode represents a let statement.
+ * It contains the variable name, the index expression (if present), and the right expression.
+ */
 typedef struct LetStatementNode LetStatementNode;
+/**
+ * @brief The IfStatementNode represents an if statement.
+ * It contains the condition expression, the if branch, and the else branch (if present).
+ */
 typedef struct IfStatementNode IfStatementNode;
+/**
+ * @brief The WhileStatementNode represents a while statement.
+ * It contains the condition expression and the body.
+ */
 typedef struct WhileStatementNode WhileStatementNode;
+/**
+ * @brief The DoStatementNode represents a do statement.
+ * It contains the subroutine call.
+ */
 typedef struct DoStatementNode DoStatementNode;
+/**
+ * @brief 
+ * It contains the return expression (if present).
+ */
 typedef struct ReturnStatementNode ReturnStatementNode;
+/**
+ * @brief The ExpressionNode represents an expression.
+ * It contains the first term and a vector of operations.
+ */
 typedef struct ExpressionNode ExpressionNode;
+
+/**
+ * @brief The TermNode represents a term.
+ * It contains a union of the different types of terms.
+ */
 typedef struct TermNode TermNode;
+/**
+ * @brief The Operation represents an operation in an expression.
+ * It contains the operator character and the term.
+ */
 typedef struct Operation Operation;
+/**
+ * @brief The VarTerm represents a term that is a variable.
+ * structure that can handle both varName and className.varName cases
+ */
 typedef struct VarTerm VarTerm;
+/**
+ * @brief The SubroutineCallNode represents a subroutine call.
+ * It contains the caller (if present), the subroutine name, and the list of expressions.
+ */
 typedef struct SubroutineCallNode SubroutineCallNode;
 
 typedef struct {
@@ -41,6 +120,7 @@ typedef struct {
     void (*visit_return_statement_node)(ReturnStatementNode*);
     void (*visit_subroutine_call_node)(SubroutineCallNode*);
     void (*visit_expression_node)(ExpressionNode*);
+    void (*visit_operation)(Operation*);
     void (*visit_term_node)(TermNode*);
     SymbolTable* currentTable;
 } ASTVisitor;
@@ -91,43 +171,21 @@ struct ASTNode {
 };
 
 
-/*
-    The ProgramNode is the root node of the AST.
-    It contains a vector of ClassNodes.
-*/
+
 struct ProgramNode {
     vector classes;
 };
-
-
-/**
-*   @brief The ClassNode represents a class declaration.
-*   It contains a vector of ClassVarDecNodes and a vector of SubroutineDecNodes.
-*/
 struct ClassNode {
     char* className;
     vector classVarDecs;
     vector subroutineDecs;
 };
 
-
-/**
- * @brief The ClassVarDecNode represents a class variable declaration.
- * It contains a vector of variable names, the variable type, and the class variable modifier.
- */
 struct ClassVarDecNode {
     enum { CVAR_NONE, STATIC, FIELD } classVarModifier;
     char* varType;
     vector varNames;
 };
-
-//Write a comment for each node type describing what it represents
-
-/**
- * @brief The SubroutineDecNode represents a subroutine declaration.
- * It contains a list of parameters, the subroutine body, and the subroutine type.
- */
-
 struct SubroutineDecNode {
     enum { SUB_NONE, CONSTRUCTOR, FUNCTION, METHOD } subroutineType;
     char* returnType;
@@ -135,48 +193,24 @@ struct SubroutineDecNode {
     ParameterListNode* parameters;
     SubroutineBodyNode* body;
 };
-
-
-/**
- * @brief The ParameterListNode represents a list of parameters.
- * It contains a vector of parameter types and a vector of parameter names.
- * 
- */
 struct ParameterListNode {
     vector parameterTypes;
     vector parameterNames;
 };
 
-/**
- * @brief The SubroutineBodyNode represents the body of a subroutine.
- *  It contains a vector of variable declarations and a list of statements.
- */
 struct SubroutineBodyNode {
     vector varDecs;
     StatementsNode* statements;
 };
 
-/**
- * @brief The VarDecNode represents a variable declaration.
- * It contains a vector of variable names and the variable type.
- */
 struct VarDecNode {
     char* varType;
     vector varNames;
 };
-
-/**
- * @brief The StatementsNode represents a list of statements.
- * It contains a vector of StatementNodes.
- */
 struct StatementsNode {
     vector statements;
 };
 
-/**
- * @brief The StatementNode represents a statement.
- * It contains a union of the different types of statements.
- */
 struct StatementNode {
     enum { STMT_NONE, LET, IF, WHILE, DO, RETURN } statementType;
     union {
@@ -188,93 +222,47 @@ struct StatementNode {
     } data;
 };
 
-/**
- * @brief The LetStatementNode represents a let statement.
- * It contains the variable name, the index expression (if present), and the right expression.
- */
 struct LetStatementNode {
     char* varName;
     ExpressionNode* indexExpression; // NULL if not present
     ExpressionNode* rightExpression;
 };
 
-/**
- * @brief The IfStatementNode represents an if statement.
- * It contains the condition expression, the if branch, and the else branch (if present).
- */
 struct IfStatementNode {
     ExpressionNode* condition;
     StatementsNode* ifBranch;
     StatementsNode* elseBranch; // NULL if not present
 };
 
-/**
- * @brief The WhileStatementNode represents a while statement.
- * It contains the condition expression and the body.
- */
 struct WhileStatementNode {
     ExpressionNode* condition;
     StatementsNode* body;
 };
-
-/**
- * @brief The DoStatementNode represents a do statement.
- * It contains the subroutine call.
- */
 struct DoStatementNode {
     SubroutineCallNode* subroutineCall;
 };
 
-
-/** @brief The ReturnStatementNode represents a return statement.
- * It contains the return expression (if present).
- */
 struct ReturnStatementNode {
     ExpressionNode* expression; // NULL if not present
 };
-
-/**
- * @brief The SubroutineCallNode represents a subroutine call.
- * It contains the caller (if present), the subroutine name, and the list of expressions.
- */
 struct SubroutineCallNode {
     char* caller; // This could be a varName or className. NULL if not present.
     char* subroutineName;
     vector arguments; // vector of ExpressionNode pointers - args
 };
-
-/**
- * @brief The ExpressionNode represents an expression.
- * It contains the first term and a vector of operations.
- */
 struct ExpressionNode {
     TermNode* term;
     vector operations;
 };
-
-/**
- * @brief The Operation represents an operation in an expression.
- * It contains the operator character and the term.
- */
 struct Operation {
     char op; // Operator character
     TermNode* term;
 };
 
-
-/**
- * @brief The VarTerm represents a term that is a variable.
- * structure that can handle both varName and className.varName cases
- */
 struct VarTerm {
     char* className; // NULL if not present
     char* varName;
 };
-
-/**
- * @brief The TermNode represents a term.
- * It contains a union of the different types of terms.
- */
 struct TermNode {
     enum { TRM_NONE,INTEGER_CONSTANT, STRING_CONSTANT, KEYWORD_CONSTANT, VAR_TERM,
            ARRAY_ACCESS, SUBROUTINE_CALL, EXPRESSION, UNARY_OP } termType;
@@ -311,4 +299,5 @@ void do_statement_node_accept(DoStatementNode* node, ASTVisitor* visitor);
 void return_statement_node_accept(ReturnStatementNode* node, ASTVisitor* visitor);
 void subroutine_call_node_accept(SubroutineCallNode* node, ASTVisitor* visitor);
 void expression_node_accept(ExpressionNode* node, ASTVisitor* visitor);
+void operation_accept(Operation* node, ASTVisitor* visitor);
 void term_node_accept(TermNode* node, ASTVisitor* visitor);
