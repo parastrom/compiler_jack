@@ -3,6 +3,7 @@
 #include <string.h>
 #include <dirent.h>
 #include "refac_parser.h"
+#include "print_ast.h"
 
 #ifndef JACK_FILES_DIR
     #define JACK_FILES_DIR "./jack_files"  // Fallback if JACK_FILES_DIR is not defined in CMakeLists.txt
@@ -42,6 +43,7 @@ int main() {
 
         Parser* parser = init_parser(lexer);
         ClassNode const* classNode = parse_class(parser);
+        print_class(classNode);
 
         // Print the AST
         printf("AST for file: %s\n", filePath);

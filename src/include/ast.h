@@ -1,3 +1,6 @@
+#ifndef AST_H
+#define AST_H
+
 #include "symbol.h"
 
 typedef struct ASTNode ASTNode;
@@ -170,116 +173,166 @@ struct ASTNode {
     } data;
 };
 
-
-
-struct ProgramNode {
+struct ProgramNode
+{
     vector classes;
 };
-struct ClassNode {
-    char* className;
+struct ClassNode
+{
+    char *className;
     vector classVarDecs;
     vector subroutineDecs;
 };
 
-struct ClassVarDecNode {
-    enum { CVAR_NONE, STATIC, FIELD } classVarModifier;
-    char* varType;
+struct ClassVarDecNode
+{
+    enum
+    {
+        CVAR_NONE,
+        STATIC,
+        FIELD
+    } classVarModifier;
+    char *varType;
     vector varNames;
 };
-struct SubroutineDecNode {
-    enum { SUB_NONE, CONSTRUCTOR, FUNCTION, METHOD } subroutineType;
-    char* returnType;
-    char* subroutineName;
-    ParameterListNode* parameters;
-    SubroutineBodyNode* body;
+struct SubroutineDecNode
+{
+    enum
+    {
+        SUB_NONE,
+        CONSTRUCTOR,
+        FUNCTION,
+        METHOD
+    } subroutineType;
+    char *returnType;
+    char *subroutineName;
+    ParameterListNode *parameters;
+    SubroutineBodyNode *body;
 };
-struct ParameterListNode {
+struct ParameterListNode
+{
     vector parameterTypes;
     vector parameterNames;
 };
 
-struct SubroutineBodyNode {
+struct SubroutineBodyNode
+{
     vector varDecs;
-    StatementsNode* statements;
+    StatementsNode *statements;
 };
 
-struct VarDecNode {
-    char* varType;
+struct VarDecNode
+{
+    char *varType;
     vector varNames;
 };
-struct StatementsNode {
+struct StatementsNode
+{
     vector statements;
 };
 
-struct StatementNode {
-    enum { STMT_NONE, LET, IF, WHILE, DO, RETURN } statementType;
-    union {
-        LetStatementNode* letStatement;
-        IfStatementNode* ifStatement;
-        WhileStatementNode* whileStatement;
-        DoStatementNode* doStatement;
-        ReturnStatementNode* returnStatement;
+struct StatementNode
+{
+    enum
+    {
+        STMT_NONE,
+        LET,
+        IF,
+        WHILE,
+        DO,
+        RETURN
+    } statementType;
+    union
+    {
+        LetStatementNode *letStatement;
+        IfStatementNode *ifStatement;
+        WhileStatementNode *whileStatement;
+        DoStatementNode *doStatement;
+        ReturnStatementNode *returnStatement;
     } data;
 };
 
-struct LetStatementNode {
-    char* varName;
-    ExpressionNode* indexExpression; // NULL if not present
-    ExpressionNode* rightExpression;
+struct LetStatementNode
+{
+    char *varName;
+    ExpressionNode *indexExpression; // NULL if not present
+    ExpressionNode *rightExpression;
 };
 
-struct IfStatementNode {
-    ExpressionNode* condition;
-    StatementsNode* ifBranch;
-    StatementsNode* elseBranch; // NULL if not present
+struct IfStatementNode
+{
+    ExpressionNode *condition;
+    StatementsNode *ifBranch;
+    StatementsNode *elseBranch; // NULL if not present
 };
 
-struct WhileStatementNode {
-    ExpressionNode* condition;
-    StatementsNode* body;
+struct WhileStatementNode
+{
+    ExpressionNode *condition;
+    StatementsNode *body;
 };
-struct DoStatementNode {
-    SubroutineCallNode* subroutineCall;
+struct DoStatementNode
+{
+    SubroutineCallNode *subroutineCall;
 };
 
-struct ReturnStatementNode {
-    ExpressionNode* expression; // NULL if not present
+struct ReturnStatementNode
+{
+    ExpressionNode *expression; // NULL if not present
 };
-struct SubroutineCallNode {
-    char* caller; // This could be a varName or className. NULL if not present.
-    char* subroutineName;
+struct SubroutineCallNode
+{
+    char *caller; // This could be a varName or className. NULL if not present.
+    char *subroutineName;
     vector arguments; // vector of ExpressionNode pointers - args
 };
-struct ExpressionNode {
-    TermNode* term;
-    vector operations;
+struct ExpressionNode
+{
+    TermNode *term;
+    vector operations; // vector of Operation pointers - ops
 };
-struct Operation {
+struct Operation
+{
     char op; // Operator character
-    TermNode* term;
+    TermNode *term;
 };
 
-struct VarTerm {
-    char* className; // NULL if not present
-    char* varName;
+struct VarTerm
+{
+    char *className; // NULL if not present
+    char *varName;
 };
-struct TermNode {
-    enum { TRM_NONE,INTEGER_CONSTANT, STRING_CONSTANT, KEYWORD_CONSTANT, VAR_TERM,
-           ARRAY_ACCESS, SUBROUTINE_CALL, EXPRESSION, UNARY_OP } termType;
-    union {
+struct TermNode
+{
+    enum
+    {
+        TRM_NONE,
+        INTEGER_CONSTANT,
+        STRING_CONSTANT,
+        KEYWORD_CONSTANT,
+        VAR_TERM,
+        ARRAY_ACCESS,
+        SUBROUTINE_CALL,
+        EXPRESSION,
+        UNARY_OP
+    } termType;
+    union
+    {
         int intValue;
-        char* stringValue;
-        char* keywordValue;
+        char *stringValue;
+        char *keywordValue;
         VarTerm varTerm;
-        struct {
-            char* arrayName;
-            ExpressionNode* index;
+        struct
+        {
+            char *arrayName;
+            ExpressionNode *index;
         } arrayAccess;
-        SubroutineCallNode* subroutineCall;
-        ExpressionNode* expression;
-        struct {
+        SubroutineCallNode *subroutineCall;
+        ExpressionNode *expression;
+        struct
+        {
             char unaryOp;
-            TermNode* term;
+            TermNode *term;
         } unaryOp;
     } data;
 };
@@ -301,3 +354,6 @@ void subroutine_call_node_accept(SubroutineCallNode* node, ASTVisitor* visitor);
 void expression_node_accept(ExpressionNode* node, ASTVisitor* visitor);
 void operation_accept(Operation* node, ASTVisitor* visitor);
 void term_node_accept(TermNode* node, ASTVisitor* visitor);
+
+
+#endif //AST_H
