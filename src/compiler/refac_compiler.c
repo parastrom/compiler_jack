@@ -1,5 +1,9 @@
-#include "compiler.h"
-#include "headers/logger.h"
+//#include "compiler.h"
+#include "logger.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <dirent.h>
 
 typedef struct {
     int parsed;

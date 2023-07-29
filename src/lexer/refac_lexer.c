@@ -1,5 +1,5 @@
-#include "headers/refac_lexer.h"
-#include "headers/token.h"
+#include "refac_lexer.h"
+#include "token.h"
 #include <string.h>
 
 /**

@@ -1,5 +1,5 @@
-#include "headers/token.h"
-#include "headers/logger.h"
+#include "token.h"
+#include "logger.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -280,23 +280,6 @@ TokenTable *new_token_table(size_t capacity)
     init_token_table(table);
 
     return table;
-}
-
-/**
- * Compute the hash value for the given key.
- *
- * @param key The key to compute the hash value for.
- * @param size The size of the token table.
- * @return The computed hash value.
- */
-size_t hash(const char *key, size_t size)
-{
-    size_t hashval = 0;
-    while (*key != '\0')
-    {
-        hashval = (hashval << 5) - hashval + *key++;
-    }
-    return hashval % size;
 }
 
 /**

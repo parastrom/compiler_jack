@@ -1,4 +1,4 @@
-#include "headers/refac_parser.h"
+#include "refac_parser.h"
 #include <string.h>
 #include <signal.h>
 
@@ -701,14 +701,4 @@ TermNode* parse_term(Parser* parser) {
 
       return node;
 
-}
-
-
-void* safer_malloc(size_t size) {
-    void* ptr = malloc(size);
-    if (!ptr) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory");
-        exit(EXIT_FAILURE);
-    }
-    return ptr;
 }

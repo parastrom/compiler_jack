@@ -1,9 +1,6 @@
-#ifndef ERROR_H
-#define ERROR_H
-
 #define MAX_ERRORS 100
 
-#include "headers/error.h"
+#include "error.h"
 #include <stddef.h>
 
 static Error errors[MAX_ERRORS];
@@ -29,5 +26,3 @@ Error get_error(void) {
         return e;
     }
 }
-
-#endif

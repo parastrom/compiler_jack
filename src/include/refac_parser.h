@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 #include "refac_lexer.h"
-#include "ast_node.h"
+#include "ast.h"
 
 typedef struct Parser {
     Lexer* lexer;
@@ -32,7 +32,7 @@ ExpressionNode* parse_expression(Parser* parser);
 TermNode* parse_term(Parser* parser);
 
 void* safer_malloc(size_t size);
-void safer_free(void** ptr);
+void safer_free(void* ptr);
 void destroy_ast(ASTNode* ast);
 void destroy_class(ClassNode* class);
 void destroy_class_var_dec(ClassVarDecNode* class_var_dec);

@@ -88,7 +88,6 @@ typedef struct {
 
 
 TokenTable* new_token_table(size_t size);
-size_t hash(const char* str, size_t size);
 void token_table_insert(TokenTable* table, const char* key, TokenType value);
 TokenType token_table_lookup(TokenTable* table, const char* key);
 void init_token_table(TokenTable* table);

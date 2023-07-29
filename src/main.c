@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
-#include "headers/refac_parser.h"
+#include "refac_parser.h"
 
 #ifndef JACK_FILES_DIR
     #define JACK_FILES_DIR "./jack_files"  // Fallback if JACK_FILES_DIR is not defined in CMakeLists.txt
