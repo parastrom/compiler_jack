@@ -22,6 +22,7 @@ typedef enum {
 } Kind;
 
 typedef enum {
+    SCOPE_GLOBAL,
     SCOPE_CLASS, 
     SCOPE_FUNCTION,
     SCOPE_METHOD,
@@ -61,11 +62,11 @@ struct ClassInfo {
 
 SymbolTable* create_table(Scope scope, SymbolTable *parent);
 void destroy_table(SymbolTable *table);
-void define(SymbolTable *table, char *name, char *type, Kind kind);
-int varCount(SymbolTable *table, Kind kind);
-Kind kindOf(SymbolTable *table, char *name);
-char* typeOf(SymbolTable *table, char *name);
-int indexOf(SymbolTable *table, char *name);
+// void define(SymbolTable *table, char *name, char *type, Kind kind);
+// int varCount(SymbolTable *table, Kind kind);
+// Kind kindOf(SymbolTable *table, char *name);
+// char* typeOf(SymbolTable *table, char *name);
+// int indexOf(SymbolTable *table, char *name);
 Symbol* symbol_new(const char *name, const char *type, Kind kind);
 void symbol_table_add(SymbolTable *table, const char* name, const char* type, Kind kind);
 Symbol* symbol_table_lookup(SymbolTable* table, char* name);

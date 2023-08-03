@@ -46,7 +46,7 @@ typedef enum
     ERROR,
 } States;
 
-Lexer *init_lexer(const char *input);
+Lexer *init_lexer(const char *filename);
 void initialize_eq_classes();
 void destroy_lexer(Lexer *lexer);
 ErrorCode process_input(Lexer *lexer);

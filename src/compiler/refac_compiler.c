@@ -1,24 +1,29 @@
 //#include "compiler.h"
 #include "logger.h"
+#include "refac_lexer.h"
+#include "refac_parser.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <dirent.h>
+#include "safer.h"
 
 typedef struct {
     int parsed;
     int parsed_num;
     char jack_files[32][128];
     char jack_vm_files[32][128];
-    int num_of_files;
+    size_t num_of_files;
     char* vm_filename;
     FILE* vm_ptr;
+    SymbolTable* global_table;
 } CompilerState;
 
 
 int InitCompiler(CompilerState* state) {
     memset(state->jack_files, 0, sizeof state->jack_files);
     memset(state->jack_vm_files, 0, sizeof state->jack_vm_files);
+    state->global_table = create_table(SCOPE_GLOBAL, NULL);
     state->num_of_files = 0;
 
     log_message(LOG_LEVEL_INFO, "Compiler initialized\n");
@@ -46,11 +51,7 @@ const char* remove_ext(const char* myStr) {
     size_t extLen = len - (lastExt - myStr);
     size_t newLen = len - extLen;
 
-    char* retStr = malloc(newLen + 1);
-    if (retStr == NULL) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for file name\n");
-        return NULL;
-    }
+    char* retStr = safer_malloc(newLen + 1);
 
     memcpy(retStr, myStr, newLen);
     retStr[newLen] = '\0';
@@ -76,7 +77,6 @@ int find_jack_files(const char* dir_name, CompilerState* state) {
             char* file_path = NULL;
             char* vm_file_path = NULL;
 
-            //Allocating memory for the file path
             size_t file_path_len = strlen(name_buf) + strlen(de->d_name) + 2; // +2 for '/' and null terminator
 
             file_path = malloc(file_path_len);
@@ -88,7 +88,6 @@ int find_jack_files(const char* dir_name, CompilerState* state) {
 
             snprintf(file_path, file_path_len, "%s/%s", name_buf, de->d_name);
 
-            //Allocating memory for the vm file path
             size_t vm_file_path_len = strlen(name_buf) + strlen(de->d_name) + 4; // +4 for ".vm", '/' and null terminator
             vm_file_path = malloc(vm_file_path_len);
             if (!vm_file_path) {
@@ -100,8 +99,8 @@ int find_jack_files(const char* dir_name, CompilerState* state) {
 
             snprintf(vm_file_path, vm_file_path_len, "%s/%s.vm", name_buf, remove_ext(de->d_name)); //Leaks memory from remove_ext
             
-            strcpy(state->jack_files[state->num_of_files], file_path);
-            strcpy(state->jack_vm_files[state->num_of_files], vm_file_path);
+            strcpy(state->jack_files[state->num_of_files++], file_path);
+            strcpy(state->jack_vm_files[state->num_of_files++], vm_file_path);
 
             // Free the dynamically allocated memory
             free(file_path);
@@ -111,4 +110,33 @@ int find_jack_files(const char* dir_name, CompilerState* state) {
 
     closedir(dir);
     return 1;
+}
+
+
+
+int compile(CompilerState* state) {
+
+    initialize_eq_classes();
+
+    vector stdlib_classes = jack_stdlib_setup();
+    add_stdlib_table(state->global_table, stdlib_classes);
+
+    ASTNode* program_node = init_program();
+    for (size_t i = 0; i < state->num_of_files; i++) {
+        Lexer* lexer = init_lexer(state->jack_files[i]);
+        Parser* parser = init_parser(lexer);
+        ClassNode* class_node = parse_class(parser);
+        vector_push(program_node->data.program->classes, class_node);
+    }
+
+
+    ASTVisitor* visitor = safer_malloc(sizeof(ASTVisitor));
+    visitor->visit_ast_node = &visit_ast_node;
+    visitor->currentTable = state->global_table;
+
+    for(int i = 0 ; i < vector_size(program_node->data.program->classes); i++) {
+        // Use the visitor to visit each class node
+        ASTNode* class_node = vector_get(program_node->data.program->classes, i);
+        ast_node_accept(class_node, visitor);
+    }
 }

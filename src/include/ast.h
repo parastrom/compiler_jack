@@ -107,49 +107,35 @@ typedef struct VarTerm VarTerm;
 typedef struct SubroutineCallNode SubroutineCallNode;
 
 typedef struct {
-    void (*visit_program_node)(ProgramNode*);
-    void (*visit_class_node)(ClassNode*);
-    void (*visit_class_var_dec_node)(ClassVarDecNode*);
-    void (*visit_subroutine_dec_node)(SubroutineDecNode*);
-    void (*visit_parameter_list_node)(ParameterListNode*);
-    void (*visit_subroutine_body_node)(SubroutineBodyNode*);
-    void (*visit_var_dec_node)(VarDecNode*);
-    void (*visit_statements_node)(StatementsNode*);
-    void (*visit_statement_node)(StatementNode*);
-    void (*visit_let_statement_node)(LetStatementNode*);
-    void (*visit_if_statement_node)(IfStatementNode*);
-    void (*visit_while_statement_node)(WhileStatementNode*);
-    void (*visit_do_statement_node)(DoStatementNode*);
-    void (*visit_return_statement_node)(ReturnStatementNode*);
-    void (*visit_subroutine_call_node)(SubroutineCallNode*);
-    void (*visit_expression_node)(ExpressionNode*);
-    void (*visit_operation)(Operation*);
-    void (*visit_term_node)(TermNode*);
+    void(*visit_ast_node)(ASTNode*);
     SymbolTable* currentTable;
 } ASTVisitor;
 
+
+typedef enum {
+    NODE_PROGRAM,
+    NODE_CLASS,
+    NODE_CLASS_VAR_DEC,
+    NODE_SUBROUTINE_DEC,
+    NODE_PARAMETER_LIST,
+    NODE_SUBROUTINE_BODY,
+    NODE_VAR_DEC,
+    NODE_STATEMENTS,
+    NODE_STATEMENT,
+    NODE_LET_STATEMENT,
+    NODE_IF_STATEMENT,
+    NODE_WHILE_STATEMENT,
+    NODE_DO_STATEMENT,
+    NODE_RETURN_STATEMENT,
+    NODE_SUBROUTINE_CALL,
+    NODE_EXPRESSION,
+    NODE_TERM,
+    NODE_OPERATION,
+    NODE_VAR_TERM
+} ASTNodeType;
+
 struct ASTNode {
-    enum{
-        NODE_PROGRAM,
-        NODE_CLASS,
-        NODE_CLASS_VAR_DEC,
-        NODE_SUBROUTINE_DEC,
-        NODE_PARAMETER_LIST,
-        NODE_SUBROUTINE_BODY,
-        NODE_VAR_DEC,
-        NODE_STATEMENTS,
-        NODE_STATEMENT,
-        NODE_LET_STATEMENT,
-        NODE_IF_STATEMENT,
-        NODE_WHILE_STATEMENT,
-        NODE_DO_STATEMENT,
-        NODE_RETURN_STATEMENT,
-        NODE_SUBROUTINE_CALL,
-        NODE_EXPRESSION,
-        NODE_TERM,
-        NODE_OPERATION,
-        NODE_VAR_TERM
-    } nodeType;
+    ASTNodeType nodeType;
     union {
         ProgramNode* program;
         ClassNode* classDec;
@@ -180,8 +166,8 @@ struct ProgramNode
 struct ClassNode
 {
     char *className;
-    vector classVarDecs;
-    vector subroutineDecs;
+    vector classVarDecs; // vector of ClassVarDecNode
+    vector subroutineDecs; // vector of SubroutineDecNode
 };
 
 struct ClassVarDecNode
@@ -193,7 +179,7 @@ struct ClassVarDecNode
         FIELD
     } classVarModifier;
     char *varType;
-    vector varNames;
+    vector varNames; // vector of char*
 };
 struct SubroutineDecNode
 {
@@ -206,29 +192,29 @@ struct SubroutineDecNode
     } subroutineType;
     char *returnType;
     char *subroutineName;
-    ParameterListNode *parameters;
-    SubroutineBodyNode *body;
+    ASTNode* parameters;
+    ASTNode* body;
 };
 struct ParameterListNode
 {
-    vector parameterTypes;
-    vector parameterNames;
+    vector parameterTypes; // vector of char*
+    vector parameterNames; // vector of char*
 };
 
 struct SubroutineBodyNode
 {
-    vector varDecs;
-    StatementsNode *statements;
+    vector varDecs; // vector of VarDecNode
+    ASTNode* statements;
 };
 
 struct VarDecNode
 {
     char *varType;
-    vector varNames;
+    vector varNames; // vector of char*
 };
 struct StatementsNode
 {
-    vector statements;
+    vector statements; //vector of StatementNode
 };
 
 struct StatementNode
@@ -244,41 +230,41 @@ struct StatementNode
     } statementType;
     union
     {
-        LetStatementNode *letStatement;
-        IfStatementNode *ifStatement;
-        WhileStatementNode *whileStatement;
-        DoStatementNode *doStatement;
-        ReturnStatementNode *returnStatement;
+        ASTNode* letStatement;
+        ASTNode* ifStatement;
+        ASTNode* whileStatement;
+        ASTNode* doStatement;
+        ASTNode* returnStatement;
     } data;
 };
 
 struct LetStatementNode
 {
     char *varName;
-    ExpressionNode *indexExpression; // NULL if not present
-    ExpressionNode *rightExpression;
+    ASTNode *indexExpression; // NULL if not present
+    ASTNode *rightExpression;
 };
 
 struct IfStatementNode
 {
-    ExpressionNode *condition;
-    StatementsNode *ifBranch;
-    StatementsNode *elseBranch; // NULL if not present
+    ASTNode* condition;
+    ASTNode* ifBranch;
+    ASTNode* elseBranch; // NULL if not present
 };
 
 struct WhileStatementNode
 {
-    ExpressionNode *condition;
-    StatementsNode *body;
+    ASTNode* condition;
+    ASTNode* body;
 };
 struct DoStatementNode
 {
-    SubroutineCallNode *subroutineCall;
+    ASTNode* subroutineCall;
 };
 
 struct ReturnStatementNode
 {
-    ExpressionNode *expression; // NULL if not present
+    ASTNode* expression; // NULL if not present
 };
 struct SubroutineCallNode
 {
@@ -288,13 +274,13 @@ struct SubroutineCallNode
 };
 struct ExpressionNode
 {
-    TermNode *term;
+    ASTNode* term;
     vector operations; // vector of Operation pointers - ops
 };
 struct Operation
 {
     char op; // Operator character
-    TermNode *term;
+    ASTNode* term;
 };
 
 struct VarTerm
@@ -325,35 +311,35 @@ struct TermNode
         struct
         {
             char *arrayName;
-            ExpressionNode *index;
+            ASTNode* index;
         } arrayAccess;
-        SubroutineCallNode *subroutineCall;
-        ExpressionNode *expression;
+        ASTNode* subroutineCall;
+        ASTNode* expression;
         struct
         {
             char unaryOp;
-            TermNode *term;
+            ASTNode* term;
         } unaryOp;
     } data;
 };
 
-void class_node_accept(ClassNode* node, ASTVisitor* visitor);
-void class_var_dec_node_accept(ClassVarDecNode* node, ASTVisitor* visitor);
-void subroutine_dec_node_accept(SubroutineDecNode* node, ASTVisitor* visitor);
-void parameter_list_node_accept(ParameterListNode* node, ASTVisitor* visitor);
-void subroutine_body_node_accept(SubroutineBodyNode* node, ASTVisitor* visitor);
-void var_dec_node_accept(VarDecNode* node, ASTVisitor* visitor);
-void statements_node_accept(StatementsNode* node, ASTVisitor* visitor);
-void statement_node_accept(StatementNode* node, ASTVisitor* visitor);
-void let_statement_node_accept(LetStatementNode* node, ASTVisitor* visitor);
-void if_statement_node_accept(IfStatementNode* node, ASTVisitor* visitor);
-void while_statement_node_accept(WhileStatementNode* node, ASTVisitor* visitor);
-void do_statement_node_accept(DoStatementNode* node, ASTVisitor* visitor);
-void return_statement_node_accept(ReturnStatementNode* node, ASTVisitor* visitor);
-void subroutine_call_node_accept(SubroutineCallNode* node, ASTVisitor* visitor);
-void expression_node_accept(ExpressionNode* node, ASTVisitor* visitor);
-void operation_accept(Operation* node, ASTVisitor* visitor);
-void term_node_accept(TermNode* node, ASTVisitor* visitor);
-
-
+void visit_ast_node(ASTVisitor* visitor, ASTNode* node);
+void ast_node_accept(ASTNode* node, ASTVisitor* visitor)
+void visit_class_node(ASTVisitor* visitor, ASTNode* node);
+void visit_class_var_dec_node(ASTVisitor* visitor, ASTNode* node);
+void visit_subroutine_dec_node(ASTVisitor* visitor, ASTNode* node);
+void visit_parameter_list_node(ASTVisitor* visitor, ASTNode* node);
+void visit_subroutine_body_node(ASTVisitor* visitor, ASTNode* node);
+void visit_var_dec_node(ASTVisitor* visitor, ASTNode* node);
+void visit_statements_node(ASTVisitor* visitor, ASTNode* node);
+void visit_statement_node(ASTVisitor* visitor, ASTNode* node);
+void visit_let_statement_node(ASTVisitor* visitor, ASTNode* node);
+void visit_if_statement_node(ASTVisitor* visitor, ASTNode* node);
+void visit_while_statement_node(ASTVisitor* visitor, ASTNode* node);
+void visit_do_statement_node(ASTVisitor* visitor, ASTNode* node);
+void visit_return_statement_node(ASTVisitor* visitor, ASTNode* node);
+void visit_subroutine_call_node(ASTVisitor* visitor, ASTNode* node);
+void visit_expression_node(ASTVisitor* visitor, ASTNode* node);
+void visit_operation(ASTVisitor* visitor, ASTNode* node);
+void visit_term_node(ASTVisitor* visitor, ASTNode* node);
 #endif //AST_H

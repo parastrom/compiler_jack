@@ -313,11 +313,11 @@ ClassInfo* screen_stdlib_setup() {
     add_parameter(draw_line, create_parameter("y2", "int"));
     add_function(screen_info, draw_line);
 
-    FunctionInfo* draw_rect = create_function("drawRect", "void", KIND_FUNCTION);
-    add_parameter(draw_rect, create_parameter("x", "int"));
-    add_parameter(draw_rect, create_parameter("y", "int"));
-    add_parameter(draw_rect, create_parameter("w", "int"));
-    add_parameter(draw_rect, create_parameter("h", "int"));
+    FunctionInfo* draw_rect = create_function("drawRectangle", "void", KIND_FUNCTION);
+    add_parameter(draw_rect, create_parameter("x1", "int"));
+    add_parameter(draw_rect, create_parameter("y1", "int"));
+    add_parameter(draw_rect, create_parameter("x2", "int"));
+    add_parameter(draw_rect, create_parameter("y2", "int"));
     add_function(screen_info, draw_rect);
 
     FunctionInfo* draw_circle = create_function("drawCircle", "void", KIND_FUNCTION);
@@ -357,7 +357,7 @@ ClassInfo* mem_stdlib_setup() {
     mem_info->name = strdup("Memory");
     mem_info->functions = vector_create();
     
-    FunctionInfo* peek = create_function("alloc", "int", KIND_FUNCTION);
+    FunctionInfo* peek = create_function("peek", "int", KIND_FUNCTION);
     add_parameter(peek, create_parameter("address", "int"));
     add_function(mem_info, peek);
 

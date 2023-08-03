@@ -228,7 +228,6 @@ char* read_file_into_string(const char* filename) {
  * Initialize a new lexer with the given filename.
  * The lexer will read the contents of the file into a string buffer.
  * The buffer is owned by the lexer.
- * Ownership of the filename is also transferred to the lexer.
  * @param filename The name of the file to be processed by the lexer - 
  * @return A pointer to the initialized lexer.
  */
@@ -247,7 +246,7 @@ Lexer* init_lexer(const char* filename) {
         
     }
     
-    lexer->filename = filename;
+    lexer->filename = strdup(filename);
     
     lexer->position = 0;
     lexer->queue = init_ringbuffer();

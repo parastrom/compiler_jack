@@ -44,7 +44,7 @@ bool ringbuffer_pop(RingBuffer* rb, Token** value) {
 }
 
 Token* ringbuffer_peek(const RingBuffer* rb) {
-    if (rb->read_idx == rb->write_idx) {
+    if (rb_is_empty(rb)) {
         log_error(ERROR_BUFFER_EMPTY, __FILE__, __LINE__, "Ring buffer is empty, cannot peek\n");
         return NULL;
     }
@@ -65,4 +65,8 @@ void ringbuffer_destroy(RingBuffer* rb) {
     }
 
     free(rb);
+}
+
+bool rb_is_empty(const RingBuffer* rb) {
+    return rb->read_idx == rb->write_idx;
 }
