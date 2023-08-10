@@ -50,7 +50,6 @@ Lexer *init_lexer(const char *filename);
 void initialize_eq_classes();
 void destroy_lexer(Lexer *lexer);
 ErrorCode process_input(Lexer *lexer);
-char *read_file_into_string(const char *filename);
 char *strip(const char *str);
 
 #endif // REFAC_LEXER_H

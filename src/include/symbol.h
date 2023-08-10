@@ -2,6 +2,7 @@
 #define SYMBOL_H
 #include "vector.h"
 #include "safer.h"
+#include "cJSON.h"
 
 typedef struct Symbol Symbol;
 typedef struct SymbolTable SymbolTable;
@@ -30,16 +31,34 @@ typedef enum {
     SUBSCOPE
 } Scope;
 
+typedef enum {
+    TYPE_INT,
+    TYPE_CHAR,
+    TYPE_BOOLEAN,
+    TYPE_STRING,
+    TYPE_NULL,
+    TYPE_USER_DEFINED
+} BasicType;
+
+typedef struct Type {
+    BasicType basicType;
+    char* userDefinedType;  // NULL unless basicType == TYPE_USER_DEFINED
+} Type;
+
 struct Symbol {
     char *name;
-    char *type;
+    Type* type;
     Kind kind;
     int index;
+    SymbolTable* table;
+    SymbolTable* childTable; // Only assigned/relevant when kind == KIND_CLASS
 };
+
 struct SymbolTable {
     vector symbols;
     int counts[KIND_NONE];
     Scope scope;
+    vector children;
     SymbolTable *parent;
 };
 
@@ -62,32 +81,19 @@ struct ClassInfo {
 
 SymbolTable* create_table(Scope scope, SymbolTable *parent);
 void destroy_table(SymbolTable *table);
-// void define(SymbolTable *table, char *name, char *type, Kind kind);
-// int varCount(SymbolTable *table, Kind kind);
-// Kind kindOf(SymbolTable *table, char *name);
-// char* typeOf(SymbolTable *table, char *name);
-// int indexOf(SymbolTable *table, char *name);
-Symbol* symbol_new(const char *name, const char *type, Kind kind);
-void symbol_table_add(SymbolTable *table, const char* name, const char* type, Kind kind);
+Symbol* symbol_new(const char *name,  Type* type, Kind kind, SymbolTable* table);
+Symbol* symbol_table_add(SymbolTable *table, const char* name, const char* type, Kind kind);
 Symbol* symbol_table_lookup(SymbolTable* table, char* name);
+vector get_symbols_of_kind(SymbolTable* table, Kind kind);
 void destroy_symbol(Symbol *symbol);
-
+SymbolTable* create_and_link_table(Scope scope, SymbolTable* parent);
 SymbolTable* getParent(SymbolTable *table);
+SymbolTable* add_child_table(SymbolTable* parent, Scope scope);
 
-ParameterInfo* create_parameter(const char* name, const char* type);
-FunctionInfo* create_function(const char* name, const char* return_type, Kind kind);
-void add_function(ClassInfo* class_info, FunctionInfo* function);
-void add_parameter(FunctionInfo* function, ParameterInfo* parameter);
-vector jack_stdlib_setup();
-ClassInfo* math_stdlib_setup();
-ClassInfo* string_stdlib_setup();
-ClassInfo* array_stdlib_setup();
-ClassInfo* output_stdlib_setup();
-ClassInfo* screen_stdlib_setup();
-ClassInfo* kb_stdlib_setup();
-ClassInfo* mem_stdlib_setup();
-ClassInfo* sys_stdlib_setup();
-void add_stdlib_table(SymbolTable* table, vector jack_os_classes);
+vector parse_jack_stdlib_from_json(const char* json_content);
+FunctionInfo* parse_function_from_json(cJSON* function_json);
+void add_stdlib_table(SymbolTable* global_table, vector jack_os_classes);
+SymbolTable* create_table_for_func(Kind kind, SymbolTable* parent_table);
 
 
 #endif // SYMBOL_H

@@ -1,0 +1,495 @@
+[
+  {
+    "name": "Math",
+    "functions": [
+      {
+        "name": "abs",
+        "return_type": "int",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "n",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "multiply",
+        "return_type": "int",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "int"
+          },
+          {
+            "name": "y",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "divide",
+        "return_type": "int",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "int"
+          },
+          {
+            "name": "y",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "min",
+        "return_type": "int",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "int"
+          },
+          {
+            "name": "y",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "max",
+        "return_type": "int",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "int"
+          },
+          {
+            "name": "y",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "sqrt",
+        "return_type": "int",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "int"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "String",
+    "functions": [
+      {
+        "name": "new",
+        "return_type": "String",
+        "kind": "KIND_CONSTRUCTOR",
+        "parameters": [
+          {
+            "name": "maxLen",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "dispose",
+        "return_type": "void",
+        "kind": "KIND_METHOD"
+      },
+      {
+        "name": "length",
+        "return_type": "int",
+        "kind": "KIND_METHOD"
+      },
+      {
+        "name": "charAt",
+        "return_type": "char",
+        "kind": "KIND_METHOD",
+        "parameters": [
+          {
+            "name": "i",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "setCharAt",
+        "return_type": "void",
+        "kind": "KIND_METHOD",
+        "parameters": [
+          {
+            "name": "i",
+            "type": "int"
+          },
+          {
+            "name": "c",
+            "type": "char"
+          }
+        ]
+      },
+      {
+        "name": "appendChar",
+        "return_type": "String",
+        "kind": "KIND_METHOD",
+        "parameters": [
+          {
+            "name": "c",
+            "type": "char"
+          }
+        ]
+      },
+      {
+        "name": "eraseLastChar",
+        "return_type": "void",
+        "kind": "KIND_METHOD"
+      },
+      {
+        "name": "intValue",
+        "return_type": "int",
+        "kind": "KIND_METHOD"
+      },
+      {
+        "name": "setInt",
+        "return_type": "void",
+        "kind": "KIND_METHOD",
+        "parameters": [
+          {
+            "name": "n",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "backSpace",
+        "return_type": "char",
+        "kind": "KIND_FUNCTION"
+      },
+      {
+        "name": "doubleQuote",
+        "return_type": "char",
+        "kind": "KIND_FUNCTION"
+      },
+      {
+        "name": "newLine",
+        "return_type": "char",
+        "kind": "KIND_FUNCTION"
+      }
+    ]
+  },
+  {
+    "name": "Array",
+    "functions": [
+      {
+        "name": "new",
+        "return_type": "Array",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "size",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "dispose",
+        "return_type": "void",
+        "kind": "KIND_METHOD"
+      }
+    ]
+  },
+  {
+    "name": "Output",
+    "functions": [
+      {
+        "name": "moveCursor",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "row",
+            "type": "int"
+          },
+          {
+            "name": "col",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "printChar",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "c",
+            "type": "char"
+          }
+        ]
+      },
+      {
+        "name": "printString",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "s",
+            "type": "String"
+          }
+        ]
+      },
+      {
+        "name": "printInt",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "n",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "println",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION"
+      },
+      {
+        "name": "backSpace",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION"
+      }
+    ]
+  },
+  {
+    "name": "Screen",
+    "functions": [
+      {
+        "name": "clearScreen",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION"
+      },
+      {
+        "name": "setColor",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "b",
+            "type": "boolean"
+          }
+        ]
+      },
+      {
+        "name": "drawPixel",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "int"
+          },
+          {
+            "name": "y",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "drawLine",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "x1",
+            "type": "int"
+          },
+          {
+            "name": "y1",
+            "type": "int"
+          },
+          {
+            "name": "x2",
+            "type": "int"
+          },
+          {
+            "name": "y2",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "drawRectangle",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "x1",
+            "type": "int"
+          },
+          {
+            "name": "y1",
+            "type": "int"
+          },
+          {
+            "name": "x2",
+            "type": "int"
+          },
+          {
+            "name": "y2",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "drawCircle",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "int"
+          },
+          {
+            "name": "y",
+            "type": "int"
+          },
+          {
+            "name": "r",
+            "type": "int"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Keyboard",
+    "functions": [
+      {
+        "name": "keyPressed",
+        "return_type": "char",
+        "kind": "KIND_FUNCTION"
+      },
+      {
+        "name": "readChar",
+        "return_type": "char",
+        "kind": "KIND_FUNCTION"
+      },
+      {
+        "name": "readLine",
+        "return_type": "String",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "message",
+            "type": "String"
+          }
+        ]
+      },
+      {
+        "name": "readInt",
+        "return_type": "int",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "message",
+            "type": "String"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Memory",
+    "functions": [
+      {
+        "name": "peek",
+        "return_type": "int",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "address",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "poke",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "address",
+            "type": "int"
+          },
+          {
+            "name": "value",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "alloc",
+        "return_type": "Array",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "size",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "deAlloc",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "array",
+            "type": "Array"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Sys",
+    "functions": [
+      {
+        "name": "halt",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION"
+      },
+      {
+        "name": "error",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "errorCode",
+            "type": "int"
+          }
+        ]
+      },
+      {
+        "name": "wait",
+        "return_type": "void",
+        "kind": "KIND_FUNCTION",
+        "parameters": [
+          {
+            "name": "ms",
+            "type": "int"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,17 @@
+build/
+.vscode/
+compiler.c
+compiler.h
+lexer.c
+lexer.h
+parser.c
+parser.h
+symbols.c
+symbols.h
+*.zip
+*.html
+*.md
+*.rs
+*.log
+*.pdf
+.gitignore

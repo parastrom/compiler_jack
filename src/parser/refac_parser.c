@@ -136,8 +136,7 @@ ASTNode* create_ast_node(ASTNodeType type) {
         case NODE_TERM:
             node->data.term = safer_malloc(sizeof(TermNode));
             node->data.term->termType = TRM_NONE;
-            break; node->data.varDec->varType = NULL;
-    node->data.varDec->varNames = vector_create();
+            break;
         case NODE_OPERATION:
             node->data.operation = safer_malloc(sizeof(Operation));
             node->data.operation->op = 0;

@@ -134,6 +134,16 @@ int compile(CompilerState* state) {
     visitor->visit_ast_node = &visit_ast_node;
     visitor->currentTable = state->global_table;
 
+    ASTVisitor sym_table_builder;
+
+    sym_table_builder.visit_class_node = visit_class_node;
+    sym_table_builder.visit_class_var_dec_node = visit_class_var_dec_node;
+    sym_table_builder.visit_subroutine_dec_node = visit_subroutine_dec_node;
+    sym_table_builder.visit_parameter_list_node = visit_parameter_list_node;
+    sym_table_builder.visit_subroutine_body_node = visit_subroutine_body_node;
+    sym_table_builder.visit_var_dec_node = visit_var_dec_node;
+    sym_table_builder.currentTable = state->global_table;
+
     for(int i = 0 ; i < vector_size(program_node->data.program->classes); i++) {
         // Use the visitor to visit each class node
         ASTNode* class_node = vector_get(program_node->data.program->classes, i);

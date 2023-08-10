@@ -2,6 +2,19 @@
 #include <string.h>
 #include "symbol.h"
 
+Kind string_to_kind(const char* kind_str) {
+    if (strcmp(kind_str, "KIND_FUNCTION") == 0) {
+        return KIND_FUNCTION;
+    } else if (strcmp(kind_str, "KIND_METHOD") == 0) {
+        return KIND_METHOD;
+    } else if (strcmp(kind_str, "KIND_CONSTRUCTOR") == 0) {
+        return KIND_CONSTRUCTOR;
+    }else {
+        log_error(ERROR_SEMANTIC_INVALID_KIND, __FILE__, __LINE__, "Invalid kind string");
+        exit(EXIT_FAILURE);
+    }
+}
+
 /**
  * @brief Create a symbol object
  * 
@@ -10,17 +23,20 @@
  * @param kind 
  * @return Symbol* 
  */
-Symbol* symbol_new(const char* name, const char* type, Kind kind) {
+Symbol* symbol_new(const char* name, Type* type, Kind kind, SymbolTable* table) {
     Symbol* symbol = malloc(sizeof(Symbol));
     symbol->name = strdup(name);
-    symbol->type = strdup(type);
+    symbol->type = type;
     symbol->kind = kind;
+    symbol->table = table;
     return symbol;
 }
 
 void symbol_free(Symbol* symbol) {
     free(symbol->name);
-    free(symbol->type);
+    if (symbol->type->basicType == TYPE_USER_DEFINED) {
+        free(symbol->type->userDefinedType);
+    }
     free(symbol);
 }
 
@@ -41,6 +57,8 @@ SymbolTable* create_table(Scope scope, SymbolTable* parent) {
         table->counts[i] = 0;
     }
     table->symbols = vector_create();
+    table->children = vector_create();
+
 
     return table;
 }
@@ -54,11 +72,36 @@ SymbolTable* create_table(Scope scope, SymbolTable* parent) {
  * @param type 
  * @param kind 
  */
-void symbol_table_add(SymbolTable* table, const char* name, const char* type, Kind kind) {
-    Symbol* symbol = symbol_new(name, type, kind);
+Symbol* symbol_table_add(SymbolTable* table, const char* name, const char* type, Kind kind) {
+    Type symbolType;
+    if(strcmp(type, "int") == 0) {
+        symbolType.basicType = TYPE_INT;
+        symbolType.userDefinedType = NULL;
+    } else if (strcmp(type, "char") == 0) {
+        symbolType.basicType = TYPE_CHAR;
+        symbolType.userDefinedType = NULL;
+    } else if (strcmp(type, "boolean") == 0) {
+        symbolType.basicType = TYPE_BOOLEAN;
+        symbolType.userDefinedType = NULL;
+    } else if (strcmp(type, "String") == 0) {
+        symbolType.basicType = TYPE_STRING;
+        symbolType.userDefinedType = NULL;
+    } else {
+        symbolType.basicType = TYPE_USER_DEFINED;
+        symbolType.userDefinedType = strdup(type);
+    }
+
+    Symbol* symbol = symbol_new(name, &symbolType, kind, table);
     symbol->index = table->counts[kind];
     table->counts[kind]++;
     vector_push(table->symbols, symbol);
+    return symbol;
+}
+
+SymbolTable* add_child_table(SymbolTable* parent, Scope scope) {
+    SymbolTable* child = create_table(scope, parent);
+    vector_push(parent->children, child);
+    return child;
 }
 
 
@@ -70,19 +113,46 @@ void symbol_table_add(SymbolTable* table, const char* name, const char* type, Ki
  * @return Symbol* 
  */
 Symbol* symbol_table_lookup(SymbolTable* table, char* name) {
+    // Current table lookup
     for (int i = 0; i < vector_size(table->symbols); ++i) {
         Symbol* symbol = (Symbol*)vector_get(table->symbols, i);
         if (strcmp(symbol->name, name) == 0) {
             return symbol;
         }
     }
-    // If not found in the current table, check the parent table
+
+    // Parent table lookup
     if (table->parent != NULL) {
         return symbol_table_lookup(table->parent, name);
     }
+
+    // Sibling lookup (other children of parent)
+    if (table->parent && table->parent->children) {
+        for (int i = 0; i < vector_size(table->parent->children); ++i) {
+            SymbolTable* siblingTable = (SymbolTable*)vector_get(table->parent->children, i);
+            if (siblingTable != table) {
+                Symbol* siblingSymbol = symbol_table_lookup(siblingTable, name);
+                if (siblingSymbol) {
+                    return siblingSymbol;
+                }
+            }
+        }
+    }
+
     return NULL;
 }
 
+
+vector get_symbols_of_kind(SymbolTable* table, Kind kind) {
+    vector symbols = vector_create();
+    for(int i = 0 ; i < vector_size(table->symbols); i++) {
+        Symbol* symbol = vector_get(table->symbols, i);
+        if (symbol->kind == kind) {
+            vector_push(symbols, symbol);
+        }
+    }
+    return symbols;
+}
 
 /**
  * @brief Destructor for SymbolTable
@@ -98,340 +168,102 @@ void destroy_table(SymbolTable* table) {
     free(table);
 }
 
-
-/**
- * @brief Create a parameter object
- * 
- * @param name name of the parameter
- * @param type type of the parameter
- * @return ParameterInfo* 
- */
-ParameterInfo* create_parameter(const char* name, const char* type) {
-    ParameterInfo* parameter = safer_malloc(sizeof(ParameterInfo));
-    parameter->name = strdup(name);
-    parameter->type = strdup(type);
-    return parameter;
-}
-
-/**
- * @brief Create a function object
- * 
- * @param name name of the function
- * @param return_type return type of the function
- * @return FunctionInfo* 
- */
-FunctionInfo* create_function(const char* name, const char* return_type, Kind kind) {
-    FunctionInfo* function = safer_malloc(sizeof(FunctionInfo));
-    function->name = strdup(name);
-    function->return_type = strdup(return_type);
-    function->kind = kind;
-    function->parameters = vector_create();
-    return function;
-}
-
-
-void add_function(ClassInfo* class_info, FunctionInfo* function) {
-    vector_push(class_info->functions, function);
-}
-
-void add_parameter(FunctionInfo* function, ParameterInfo* parameter) {
-    vector_push(function->parameters, parameter);
-}
-
-vector jack_stdlib_setup() {
+vector parse_jack_stdlib_from_json(const char* json_content) {
+    cJSON *root = cJSON_Parse(json_content);
+    if (root == NULL) {
+        // Handle parsing error
+        log_error(ERROR_JSON_PARSING, __FILE__, __LINE__, cJSON_GetErrorPtr());
+        exit(EXIT_FAILURE);
+    }
 
     vector std_classes = vector_create();
-    vector_push(std_classes, math_stdlib_setup());
-    vector_push(std_classes, string_stdlib_setup());
-    vector_push(std_classes, array_stdlib_setup());
-    vector_push(std_classes, output_stdlib_setup());
-    vector_push(std_classes, screen_stdlib_setup());
-    vector_push(std_classes, kb_stdlib_setup());
-    vector_push(std_classes, mem_stdlib_setup());
-    vector_push(std_classes, sys_stdlib_setup());
+
+    // Iterate over each class in the JSON
+    cJSON *class_item = NULL;
+    cJSON_ArrayForEach(class_item, root) {
+        ClassInfo *class_info = safer_malloc(sizeof(ClassInfo));
+
+        // The class name is the key for this item
+        class_info->name = strdup(class_item->string);
+        class_info->functions = vector_create();
+
+        cJSON *functions_array = cJSON_GetObjectItem(class_item, "functions");
+        cJSON *function_item = NULL;
+        cJSON_ArrayForEach(function_item, functions_array) {
+            FunctionInfo* function_info = parse_function_from_json(function_item);
+            vector_push(class_info->functions, function_info);
+        }
+
+        cJSON *methods_array = cJSON_GetObjectItem(class_item, "methods");
+        cJSON *method_item = NULL;
+        cJSON_ArrayForEach(method_item, methods_array) {
+            FunctionInfo* method_info = parse_function_from_json(method_item);
+            vector_push(class_info->functions, method_info);
+        }
+
+        vector_push(std_classes, class_info);
+    }
+
+    cJSON_Delete(root);
 
     return std_classes;
-
 }
 
-ClassInfo* math_stdlib_setup() {
-    ClassInfo* math_info = safer_malloc(sizeof(ClassInfo));
-    math_info->name = strdup("Math");
-    math_info->functions = vector_create();
+FunctionInfo* parse_function_from_json(cJSON* function_json) {
+    FunctionInfo *function_info = safer_malloc(sizeof(FunctionInfo));
+    function_info->name = strdup(cJSON_GetObjectItem(function_json, "name")->valuestring);
+    function_info->return_type = strdup(cJSON_GetObjectItem(function_json, "return_type")->valuestring);
+    function_info->kind = string_to_kind(cJSON_GetObjectItem(function_json, "kind")->valuestring);
+    function_info->parameters = vector_create();
 
-    FunctionInfo* math_abs = create_function("abs", "int", KIND_FUNCTION);
-    add_parameter(math_abs, create_parameter("n", "int"));
-    add_function(math_info, math_abs);
+    cJSON *params = cJSON_GetObjectItem(function_json, "parameters");
+    cJSON *param_item = NULL;
+    cJSON_ArrayForEach(param_item, params) {
+        ParameterInfo *param_info = safer_malloc(sizeof(ParameterInfo));
+        param_info->name = strdup(cJSON_GetObjectItem(param_item, "name")->valuestring);
+        param_info->type = strdup(cJSON_GetObjectItem(param_item, "type")->valuestring);
+        vector_push(function_info->parameters, param_info);
+    }
 
-
-    FunctionInfo* math_multiply = create_function("multiply", "int", KIND_FUNCTION);
-    add_parameter(math_multiply, create_parameter("x", "int"));
-    add_parameter(math_multiply, create_parameter("y", "int"));
-    add_function(math_info, math_multiply);
-
-    FunctionInfo* math_divide = create_function("divide", "int", KIND_FUNCTION);
-    add_parameter(math_divide, create_parameter("x", "int"));
-    add_parameter(math_divide, create_parameter("y", "int"));
-    add_function(math_info, math_divide);
-
-    FunctionInfo* math_min = create_function("min", "int", KIND_FUNCTION);
-    add_parameter(math_min, create_parameter("x", "int"));
-    add_parameter(math_min, create_parameter("y", "int"));
-    add_function(math_info, math_min);
-
-    FunctionInfo* math_max = create_function("max", "int", KIND_FUNCTION);
-    add_parameter(math_max, create_parameter("x", "int"));
-    add_parameter(math_max, create_parameter("y", "int"));
-    add_function(math_info, math_max);
-
-    FunctionInfo* math_sqrt = create_function("sqrt", "int", KIND_FUNCTION);
-    add_parameter(math_sqrt, create_parameter("x", "int"));
-    add_function(math_info, math_sqrt);
-
-    return math_info;
+    return function_info;
 }
 
-ClassInfo* string_stdlib_setup() {
-    ClassInfo* string_info = safer_malloc(sizeof(ClassInfo));
-    string_info->name = strdup("String");
-    string_info->functions = vector_create();
-
-    FunctionInfo* string_new_int = create_function("new", "String", KIND_CONSTRUCTOR);
-    add_parameter(string_new_int, create_parameter("maxLen", "int"));
-    add_function(string_info, string_new_int);
-
-    FunctionInfo* string_append = create_function("dispose", "void", KIND_METHOD);
-    add_function(string_info, string_append);
-
-    FunctionInfo* string_length = create_function("length", "int", KIND_METHOD);
-    add_function(string_info, string_length);
-
-    FunctionInfo* string_charAt = create_function("charAt", "char", KIND_METHOD);
-    add_parameter(string_charAt, create_parameter("i", "int"));
-    add_function(string_info, string_charAt);
-
-    FunctionInfo* string_setCharAt = create_function("setCharAt", "void", KIND_METHOD);
-    add_parameter(string_setCharAt, create_parameter("i", "int"));
-    add_parameter(string_setCharAt, create_parameter("c", "char"));
-    add_function(string_info, string_setCharAt);
-
-    FunctionInfo* string_appendChar = create_function("appendChar", "String", KIND_METHOD);
-    add_parameter(string_appendChar, create_parameter("c", "char"));
-    add_function(string_info, string_appendChar);
-
-    FunctionInfo* string_eraseLastChar = create_function("eraseLastChar", "void", KIND_METHOD);
-    add_function(string_info, string_eraseLastChar);
-
-    FunctionInfo* string_intVal = create_function("intValue", "int", KIND_METHOD);
-    add_function(string_info, string_intVal);
-
-    FunctionInfo* string_setIntVal = create_function("setInt", "void", KIND_METHOD);
-    add_parameter(string_setIntVal, create_parameter("n", "int"));
-    add_function(string_info, string_setIntVal);
-
-    FunctionInfo* string_backSpace = create_function("backSpace", "char", KIND_FUNCTION);
-    add_function(string_info, string_backSpace);
-
-    FunctionInfo* string_doubleQuote = create_function("doubleQuote", "char", KIND_FUNCTION);
-    add_function(string_info, string_doubleQuote);
-
-    FunctionInfo* string_newLine = create_function("newLine", "char", KIND_FUNCTION);
-    add_function(string_info, string_newLine);
-
-    return string_info;
-}
-
-ClassInfo* array_stdlib_setup() {
-    ClassInfo* array_info = safer_malloc(sizeof(ClassInfo));
-    array_info->name = strdup("Array");
-    array_info->functions = vector_create();
-
-    FunctionInfo* array_new = create_function("new", "Array", KIND_FUNCTION);
-    add_parameter(array_new, create_parameter("size", "int"));
-    add_function(array_info, array_new);
-
-    FunctionInfo* array_dispose = create_function("dispose", "void", KIND_METHOD);
-    add_function(array_info, array_dispose);
-
-    return array_info;
-}
-
-
-ClassInfo* output_stdlib_setup() {
-    ClassInfo* output_info = safer_malloc(sizeof(ClassInfo));
-    output_info->name = strdup("Output");
-    output_info->functions = vector_create();
-
-    FunctionInfo* output_move_cursor = create_function("moveCursor", "void", KIND_FUNCTION);
-    add_parameter(output_move_cursor, create_parameter("row", "int"));
-    add_parameter(output_move_cursor, create_parameter("col", "int"));
-    add_function(output_info, output_move_cursor);
-
-    FunctionInfo* output_print_char = create_function("printChar", "void", KIND_FUNCTION);
-    add_parameter(output_print_char, create_parameter("c", "char"));
-    add_function(output_info, output_print_char);
-
-    FunctionInfo* output_print_string = create_function("printString", "void", KIND_FUNCTION);
-    add_parameter(output_print_string, create_parameter("s", "String"));
-    add_function(output_info, output_print_string);
-
-    FunctionInfo* output_print_int = create_function("printInt", "void", KIND_FUNCTION);
-    add_parameter(output_print_int, create_parameter("n", "int"));
-    add_function(output_info, output_print_int);
-
-    FunctionInfo* output_println = create_function("println", "void", KIND_FUNCTION);
-    add_function(output_info, output_println);
-
-    FunctionInfo* output_backspace = create_function("backSpace", "void", KIND_FUNCTION);
-    add_function(output_info, output_backspace);
-
-    return output_info;
-}
-
-ClassInfo* screen_stdlib_setup() {
-
-    ClassInfo* screen_info = safer_malloc(sizeof(ClassInfo));
-    screen_info->name = strdup("Screen");
-    screen_info->functions = vector_create();
-
-    FunctionInfo* clear_screen = create_function("clearScreen", "void", KIND_FUNCTION);
-    add_function(screen_info, clear_screen);
-
-    FunctionInfo* set_color = create_function("setColor", "void", KIND_FUNCTION);
-    add_parameter(set_color, create_parameter("b", "boolean"));
-    add_function(screen_info, set_color);
-
-    FunctionInfo* draw_pixel = create_function("drawPixel", "void", KIND_FUNCTION);
-    add_parameter(draw_pixel, create_parameter("x", "int"));
-    add_parameter(draw_pixel, create_parameter("y", "int"));
-    add_function(screen_info, draw_pixel);
-
-    FunctionInfo* draw_line = create_function("drawLine", "void", KIND_FUNCTION);
-    add_parameter(draw_line, create_parameter("x1", "int"));
-    add_parameter(draw_line, create_parameter("y1", "int"));
-    add_parameter(draw_line, create_parameter("x2", "int"));
-    add_parameter(draw_line, create_parameter("y2", "int"));
-    add_function(screen_info, draw_line);
-
-    FunctionInfo* draw_rect = create_function("drawRectangle", "void", KIND_FUNCTION);
-    add_parameter(draw_rect, create_parameter("x1", "int"));
-    add_parameter(draw_rect, create_parameter("y1", "int"));
-    add_parameter(draw_rect, create_parameter("x2", "int"));
-    add_parameter(draw_rect, create_parameter("y2", "int"));
-    add_function(screen_info, draw_rect);
-
-    FunctionInfo* draw_circle = create_function("drawCircle", "void", KIND_FUNCTION);
-    add_parameter(draw_circle, create_parameter("x", "int"));
-    add_parameter(draw_circle, create_parameter("y", "int"));
-    add_parameter(draw_circle, create_parameter("r", "int"));
-    add_function(screen_info, draw_circle);
-}
-
-
-ClassInfo* kb_stdlib_setup() {
-
-    ClassInfo* keyboard_info = safer_malloc(sizeof(ClassInfo));
-    keyboard_info->name = strdup("Keyboard");
-    keyboard_info->functions = vector_create();
-
-    FunctionInfo* keyPressed = create_function("keyPressed", "char", KIND_FUNCTION);
-    add_function(keyboard_info, keyPressed);
-
-    FunctionInfo* readChar = create_function("readChar", "char", KIND_FUNCTION);
-    add_function(keyboard_info, readChar);
-
-    FunctionInfo* readLine = create_function("readLine", "String", KIND_FUNCTION);
-    add_parameter(readLine, create_parameter("message", "String"));
-    add_function(keyboard_info, readLine);
-
-    FunctionInfo* readInt = create_function("readInt", "int", KIND_FUNCTION);
-    add_parameter(readInt, create_parameter("message", "String"));
-    add_function(keyboard_info, readInt);
-
-    return keyboard_info;
-}
-
-ClassInfo* mem_stdlib_setup() {
-
-    ClassInfo* mem_info = safer_malloc(sizeof(ClassInfo));
-    mem_info->name = strdup("Memory");
-    mem_info->functions = vector_create();
-    
-    FunctionInfo* peek = create_function("peek", "int", KIND_FUNCTION);
-    add_parameter(peek, create_parameter("address", "int"));
-    add_function(mem_info, peek);
-
-   FunctionInfo* poke = create_function("poke", "void", KIND_FUNCTION);
-    add_parameter(poke, create_parameter("address", "int"));
-    add_parameter(poke, create_parameter("value", "int"));
-    add_function(mem_info, poke);
-
-    FunctionInfo* alloc = create_function("alloc", "Array", KIND_FUNCTION);
-    add_parameter(alloc, create_parameter("size", "int"));
-    add_function(mem_info, alloc);
-
-    FunctionInfo* deAlloc = create_function("deAlloc", "void", KIND_FUNCTION);
-    add_parameter(deAlloc, create_parameter("array", "Array"));
-    add_function(mem_info, deAlloc);
-
-    return mem_info;
-}
-
-ClassInfo* sys_stdlib_setup() {
-    ClassInfo* sys_info = safer_malloc(sizeof(ClassInfo));
-    sys_info->name = strdup("Sys");
-    sys_info->functions = vector_create();
-
-    FunctionInfo* halt = create_function("halt", "void", KIND_FUNCTION);
-    add_function(sys_info, halt);
-
-    FunctionInfo* error = create_function("error", "void", KIND_FUNCTION);
-    add_parameter(error, create_parameter("errorCode", "int"));
-    add_function(sys_info, error);
-    
-    FunctionInfo* wait = create_function("wait", "void", KIND_FUNCTION);
-    add_parameter(wait, create_parameter("ms", "int"));
-    add_function(sys_info, wait);
-
-    return sys_info;
-
-}
-
-void add_stdlib_table(SymbolTable* table, vector jack_os_classes) {
+void add_stdlib_table(SymbolTable* global_table, vector jack_os_classes) {
     for (int i = 0; i < vector_size(jack_os_classes); i++) {
-
         ClassInfo* class_info = vector_get(jack_os_classes, i);
-        
-        symbol_table_add(table, class_info->name, class_info->name, KIND_CLASS);
+
+        // Add class to global table and create a new table for the class
+        Symbol* class_symbol = symbol_table_add(global_table, class_info->name, class_info->name, KIND_CLASS);
+        SymbolTable* class_table = class_symbol->childTable;
 
         for (int j = 0; j < vector_size(class_info->functions); j++) {
             FunctionInfo* func_info = vector_get(class_info->functions, j);
 
-            symbol_table_add(table, func_info->name, func_info->return_type, func_info->kind);
-
-            SymbolTable* func_table;
-
-            switch(func_info->kind) {
-                case KIND_CONSTRUCTOR:
-                    func_table = create_table(SCOPE_CONSTRUCTOR, table);
-                    break;
-                case KIND_METHOD:
-                    func_table = create_table(SCOPE_METHOD, table);
-                    break;
-                case KIND_FUNCTION:
-                    func_table =  create_table(SCOPE_FUNCTION, table);
-                    break;
-                default:
-                    log_error(ERROR_SEMANTIC_INVALID_SCOPE, __FILE__, __LINE__, "Invalid function kind");
-                    exit(EXIT_FAILURE);
-            }
+            // Add function/method/constructor to class's table and create a new table for it
+            (void) symbol_table_add(class_table, func_info->name, func_info->return_type, func_info->kind);
+            SymbolTable* func_table = create_table_for_func(func_info->kind, class_table);  // Helper function to determine scope and create table
 
             for (int k = 0; k < vector_size(func_info->parameters); k++) {
                 ParameterInfo* param_info = vector_get(func_info->parameters, k);
-                symbol_table_add(func_table, param_info->name, param_info->type, KIND_ARG);
+                (void) symbol_table_add(func_table, param_info->name, param_info->type, KIND_ARG);
             }
         }
     }
 }
+
+SymbolTable* create_table_for_func(Kind kind, SymbolTable* parent_table) {
+    switch(kind) {
+        case KIND_CONSTRUCTOR:
+            return create_table(SCOPE_CONSTRUCTOR, parent_table);
+        case KIND_METHOD:
+            return create_table(SCOPE_METHOD, parent_table);
+        case KIND_FUNCTION:
+            return create_table(SCOPE_FUNCTION, parent_table);
+        default:
+            log_error(ERROR_SEMANTIC_INVALID_SCOPE, __FILE__, __LINE__, "Invalid function kind");
+            exit(EXIT_FAILURE);
+    }
+}
+
 
 
