@@ -107,11 +107,9 @@ typedef struct VarTerm VarTerm;
  */
 typedef struct SubroutineCallNode SubroutineCallNode;
 
-typedef struct {
-    void(*visit_ast_node)(ASTNode*);
+typedef struct SemanticAnalyzer SemanticAnalyzer;
+typedef struct SymbolTableBuilder SymbolTableBuilder;
 
-    SymbolTable* currentTable;
-} ASTVisitor;
 
 typedef enum {
     NODE_PROGRAM,
@@ -160,33 +158,6 @@ struct ASTNode {
     } data;
 };
 
-typedef struct {
-    void (*build_program_node)(ASTVisitor*, ASTNode*);
-    void (*build_class_node)(ASTVisitor*, ASTNode*);
-    void (*build_subroutine_dec_node)(ASTVisitor*, ASTNode*);
-    void (*build_parameter_list_node)(ASTVisitor*, ASTNode*);
-    void (*build_var_dec_node)(ASTVisitor*, ASTNode*);
-    void (*build_subroutine_body)(ASTVisitor*, ASTNode*);
-} SymbolTableBuilder;
-
-typedef struct {
-    void (*analyze_program_node)(ASTVisitor*, ASTNode*);
-    void (*analyze_class_node)(ASTVisitor*, ASTNode*);
-    void (*analyze_subroutine_dec_node)(ASTVisitor*, ASTNode*);
-    void (*analyze_parameter_list_node)(ASTVisitor*, ASTNode*);
-    void (*analyze_var_dec_node)(ASTVisitor*, ASTNode*);
-    void (*analyze_let_statement_node)(ASTVisitor*, ASTNode*);
-    void (*analyze_if_statement_node)(ASTVisitor*, ASTNode*);
-    void (*analyze_while_statement_node)(ASTVisitor*, ASTNode*);
-    void (*analyze_do_statement_node)(ASTVisitor*, ASTNode*);
-    void (*analyze_return_statement_node)(ASTVisitor*, ASTNode*);
-    void (*analyze_subroutine_call_node)(ASTVisitor*, ASTNode*);
-    void (*analyze_expression_node)(ASTVisitor*, ASTNode*);
-    void (*analyze_term_node)(ASTVisitor*, ASTNode*);
-    void (*analyze_operation_node)(ASTVisitor*, ASTNode*);
-    void (*analyze_var_term_node)(ASTVisitor*, ASTNode*);
-} SemanticAnalyzer;
-
 typedef enum {
     BUILD,
     ANALYZE,
@@ -201,12 +172,44 @@ typedef struct {
     SymbolTable* currentTable;
     Phase phase;
     char* currentClassName;
+    Arena* arena;
 } ASTVisitor;
+
+struct SymbolTableBuilder {
+    void (*build_program_node)(ASTVisitor*, ASTNode*);
+    void (*build_class_node)(ASTVisitor*, ASTNode*);
+    void (*build_class_var_dec_node)(ASTVisitor*, ASTNode*);
+    void (*build_subroutine_dec_node)(ASTVisitor*, ASTNode*);
+    void (*build_parameter_list_node)(ASTVisitor*, ASTNode*);
+    void (*build_var_dec_node)(ASTVisitor*, ASTNode*);
+    void (*build_subroutine_body)(ASTVisitor*, ASTNode*);
+};
+
+struct SemanticAnalyzer {
+    void (*analyze_program_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_class_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_class_var_dec_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_subroutine_dec_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_parameter_list_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_subroutine_body_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_statements)(ASTVisitor*, ASTNode*);
+    void (*analyze_let_statement_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_if_statement_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_while_statement_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_do_statement_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_return_statement_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_subroutine_call_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_expression_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_term_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_operation_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_var_term_node)(ASTVisitor*, ASTNode*);
+};
 
 struct ProgramNode
 {
     vector classes;
 };
+
 struct ClassNode
 {
     char *className;
@@ -369,8 +372,10 @@ struct TermNode
     Type type;
 };
 
+ASTNode* init_ast_node(ASTNodeType type, Arena* arena);
+
 void visit_ast_node(ASTVisitor* visitor, ASTNode* node);
-void ast_node_accept(ASTNode* node, ASTVisitor* visitor);
+void ast_node_accept(ASTVisitor *visitor, ASTNode *node);
 void visit_class_node(ASTVisitor* visitor, ASTNode* node);
 void visit_class_var_dec_node(ASTVisitor* visitor, ASTNode* node);
 void visit_subroutine_dec_node(ASTVisitor* visitor, ASTNode* node);

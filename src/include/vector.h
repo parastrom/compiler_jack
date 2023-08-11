@@ -1,10 +1,10 @@
-#ifndef __VECTOR_H
-#define __VECTOR_H
+#ifndef VECTOR_H
+#define VECTOR_H
 
 // FROM https://github.com/tobybell/c-vector
 
 #include <stdbool.h>
-
+#include "arena.h"
 /**
  * Type: Vector
  * 
@@ -21,7 +21,7 @@ typedef struct vector *vector;
  * The returned vector will have been dynamically allocated, and must be
  * destroyed after use using `vector_destroy`.
  */
-vector vector_create();
+vector vector_create(Arena* arena);
 
 /**
  * Clean up a vector after use.
@@ -76,4 +76,4 @@ void vector_push(vector v, void *value);
  */
 void *vector_pop(vector v);
 
-#endif
+#endif //VECTOR_H

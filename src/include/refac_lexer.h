@@ -2,19 +2,20 @@
 #define REFAC_LEXER_H
 
 #include <stdio.h>
-#include "ringbuffer.h"
+#include "stack.h"
 #include "logger.h"
 
 #define NUM_STATES 11
 #define NUM_EQ_CLASSES 10
 typedef struct
 {
-    const char *input;
+    char *input;
     size_t position;
     const char *filename;
     int cur_len;
-    RingBuffer *queue;
+    Stack* stack;
     ErrorCode error_code;
+    Arena* arena;
 } Lexer;
 
 typedef enum
@@ -46,7 +47,7 @@ typedef enum
     ERROR,
 } States;
 
-Lexer *init_lexer(const char *filename);
+Lexer *init_lexer(const char *filename, Arena* arena);
 void initialize_eq_classes();
 void destroy_lexer(Lexer *lexer);
 ErrorCode process_input(Lexer *lexer);

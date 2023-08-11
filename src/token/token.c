@@ -103,6 +103,19 @@ const char *token_type_names[] = {
     "TOKEN_TYPE_AMPERSAND", "TOKEN_TYPE_BAR", "TOKEN_TYPE_TILDE",
     "TOKEN_TYPE_GREATER_THAN", "TOKEN_TYPE_LESS_THAN"};
 
+const char* token_caetgory_names[] = {
+        "TOKEN_CATEGORY_UNRECOGNISED",
+        "TOKEN_CATEGORY_CLASS_VAR",
+        "TOKEN_CATEGORY_SUBROUTINE_DEC",
+        "TOKEN_CATEGORY_STATEMENT",
+        "TOKEN_CATEGORY_TYPE",
+        "TOKEN_CATEGORY_FACTOR",
+        "TOKEN_CATEGORY_UNARY",
+        "TOKEN_CATEGORY_RELATIONAL",
+        "TOKEN_CATEGORY_BOOLEAN",
+        "TOKEN_CATEGORY_ARITH",
+};
+
 
 const char* token_type_to_string(TokenType type) {
     return token_type_names[type];
@@ -172,39 +185,29 @@ bool is_token_category(TokenType type, TokenCategory category)
     return (get_token_category(type) & category) != 0;
 }
 
-/**
- * Get the TokenType of the given token.
- *
- * @param token The token.
- * @return The TokenType of the token.
- */
-TokenType get_token_type(const Token *token)
-{
-    return token->type;
-}
-
-/**
- * Get the lexeme of the given token.
- *
- * @param token The token.
- * @return The lexeme of the token.
- */
-char *get_token_lx(const Token *token)
-{
-    return token->lx;
-}
-
-/**
- * Print the formatted representation of the token.
- *
- * @param token The token to format and print.
- */
-void fmt(const Token *token)
-{
-    printf("Token {  type: %-30s Lexeme: %-10s Line: %d }",
-           token_type_names[token->type],
-           token->lx,
-           token->line);
+const char* category_to_string(TokenCategory category) {
+    switch (category) {
+        case TOKEN_CATEGORY_UNRECOGNISED:
+            return "TOKEN_CATEGORY_UNRECOGNISED";
+        case TOKEN_CATEGORY_CLASS_VAR:
+            return "TOKEN_CATEGORY_CLASS_VAR";
+        case TOKEN_CATEGORY_SUBROUTINE_DEC:
+            return "TOKEN_CATEGORY_SUBROUTINE_DEC";
+        case TOKEN_CATEGORY_STATEMENT:
+            return "TOKEN_CATEGORY_STATEMENT";
+        case TOKEN_CATEGORY_TYPE:
+            return "TOKEN_CATEGORY_TYPE";
+        case TOKEN_CATEGORY_FACTOR:
+            return "TOKEN_CATEGORY_FACTOR";
+        case TOKEN_CATEGORY_UNARY:
+            return "TOKEN_CATEGORY_UNARY";
+        case TOKEN_CATEGORY_RELATIONAL:
+            return "TOKEN_CATEGORY_RELATIONAL";
+        case TOKEN_CATEGORY_BOOLEAN:
+            return "TOKEN_CATEGORY_BOOLEAN";
+        case TOKEN_CATEGORY_ARITH:
+            return "TOKEN_CATEGORY_ARITH";
+    }
 }
 
 /**
@@ -213,7 +216,6 @@ void fmt(const Token *token)
  * @param token 
  * @return char* 
  */
-
 char* token_to_string(const Token *token)
 {
     // Assuming the lexeme won't be more than 100 characters.
@@ -234,9 +236,9 @@ char* token_to_string(const Token *token)
  * @param line The line number where the token was found.
  * @return A pointer to the newly created token.
  */
-Token *new_token(TokenType type, const char *lx, int line)
+Token *new_token(TokenType type, char *lx, int line, Arena* arena)
 {
-    Token *token = malloc(sizeof(Token));
+    Token *token = arena_alloc(arena, sizeof(Token));
     if (token == NULL)
     {
         log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Failed to allocate memory for token");
@@ -254,127 +256,5 @@ void destroy_token(Token *token)
     if (token != NULL)
     {
         free(token->lx); // Free the dynamically allocated memory for 'lx'
-        free(token);     // Free the 'Token' struct itself
     }
-}
-
-/**
- * Create a new token table with the specified capacity.
- *
- * @param capacity The initial capacity of the token table.
- * @return A pointer to the newly created token table.
- */
-TokenTable *new_token_table(size_t capacity)
-{
-    TokenTable *table = malloc(sizeof(TokenTable));
-    if (table == NULL)
-    {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Failed to allocate memory for token table");
-        return NULL;
-    }
-
-    table->keys = calloc(capacity, sizeof(char *));
-    table->values = calloc(capacity, sizeof(TokenType));
-    table->size = capacity;
-
-    init_token_table(table);
-
-    return table;
-}
-
-/**
- * Insert a key-value pair into the token table.
- *
- * @param table The token table.
- * @param key The key to insert.
- * @param value The value associated with the key.
- */
-void token_table_insert(TokenTable *table, const char *key, TokenType value)
-{
-    size_t index = hash(key, table->size);
-    while (table->keys[index] != NULL)
-    {
-        if (strcmp(table->keys[index], key) == 0)
-        {
-            table->values[index] = value;
-            return;
-        }
-        index = (index + 1) % table->size;
-    }
-    table->keys[index] = strdup(key);
-    table->values[index] = value;
-}
-
-/**
- * Look up the value associated with the given key in the token table.
- *
- * @param table The token table.
- * @param key The key to look up.
- * @return The value associated with the key, or TOKEN_TYPE_ID if not found.
- */
-TokenType token_table_lookup(TokenTable *table, const char *key)
-{
-    size_t index = hash(key, table->size);
-    while (table->keys[index] != NULL)
-    {
-        if (strcmp(table->keys[index], key) == 0)
-        {
-            return table->values[index];
-        }
-        index = (index + 1) % table->size;
-    }
-    return TOKEN_TYPE_ID;
-}
-
-void destroy_token_table(TokenTable *table)
-{
-    if (table != NULL)
-    {
-        if (table->keys != NULL)
-        {
-            for (size_t i = 0; i < table->size; i++)
-            {
-                if (table->keys[i] != NULL)
-                {
-                    free(table->keys[i]);
-                }
-            }
-            free(table->keys);
-        }
-        if (table->values != NULL)
-        {
-            free(table->values);
-        }
-        free(table);
-    }
-}
-
-/**
- * Initialize the token table with predefined key-value pairs.
- *
- * @param table The token table to initialize.
- */
-void init_token_table(TokenTable *table)
-{
-    token_table_insert(table, "class", TOKEN_TYPE_CLASS);
-    token_table_insert(table, "constructor", TOKEN_TYPE_CONSTRUCTOR);
-    token_table_insert(table, "function", TOKEN_TYPE_FUNCTION);
-    token_table_insert(table, "method", TOKEN_TYPE_METHOD);
-    token_table_insert(table, "field", TOKEN_TYPE_FIELD);
-    token_table_insert(table, "static", TOKEN_TYPE_STATIC);
-    token_table_insert(table, "var", TOKEN_TYPE_VAR);
-    token_table_insert(table, "int", TOKEN_TYPE_INT);
-    token_table_insert(table, "char", TOKEN_TYPE_CHAR);
-    token_table_insert(table, "boolean", TOKEN_TYPE_BOOLEAN);
-    token_table_insert(table, "void", TOKEN_TYPE_VOID);
-    token_table_insert(table, "true", TOKEN_TYPE_TRUE);
-    token_table_insert(table, "false", TOKEN_TYPE_FALSE);
-    token_table_insert(table, "null", TOKEN_TYPE_NULL);
-    token_table_insert(table, "this", TOKEN_TYPE_THIS);
-    token_table_insert(table, "let", TOKEN_TYPE_LET);
-    token_table_insert(table, "do", TOKEN_TYPE_DO);
-    token_table_insert(table, "if", TOKEN_TYPE_IF);
-    token_table_insert(table, "else", TOKEN_TYPE_ELSE);
-    token_table_insert(table, "while", TOKEN_TYPE_WHILE);
-    token_table_insert(table, "return", TOKEN_TYPE_RETURN);
 }

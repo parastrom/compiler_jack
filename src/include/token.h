@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include "arena.h"
 
 typedef enum
 {
@@ -79,30 +80,15 @@ typedef struct
     TokenType tokenType;
 } TokenMapping;
 
-
-typedef struct {
-    char** keys;
-    TokenType* values;
-    size_t size;
-} TokenTable;
-
-
-TokenTable* new_token_table(size_t size);
-void token_table_insert(TokenTable* table, const char* key, TokenType value);
-TokenType token_table_lookup(TokenTable* table, const char* key);
-void init_token_table(TokenTable* table);
-
-
 const char* token_type_to_string(TokenType type);
 TokenType token_type_from_str(const char *str);
 TokenType token_type_from_char(char ch);
 
 TokenCategory get_token_category(TokenType type);
 bool is_token_category(TokenType type, TokenCategory category);
-Token *new_token(TokenType type, const char *lx, int line);
+const char* category_to_string(TokenCategory category);
+Token *new_token(TokenType type, char *lx, int line, Arena* arena);
 void destroy_token(Token *token);
-TokenType get_token_type(const Token *token);
-char *get_token_lx(const Token *token);
 
 void fmt(const Token *token);
 char* token_to_string(const Token *token);

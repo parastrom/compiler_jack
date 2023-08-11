@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <assert.h>
 
+
 /**
  * Struct: Vector
  * 
@@ -30,18 +31,18 @@ static void extend_if_necessary(vector v);
  * The returned vector will have been dynamically allocated, and must be
  * destroyed after use using `vector_destroy`.
  */
-vector vector_create() {
+vector vector_create(Arena* arena) {
 
   // Allocate space for the vector itself, as well as its internal element 
   // storage (capacity 1 to start).
-  vector v = malloc(sizeof (vector));
+  vector v = arena_alloc(arena,sizeof (vector));
   assert(v != NULL);
   v->elems = malloc(sizeof (void *));
   assert(v->elems != NULL);
 
   // Vector metadata. Capacity starts at one, since we have allocated space for 
   // one element already.
-  v->capacity = 1;
+  v->capacity = 4;
   v->size = 0;
 
   return v;

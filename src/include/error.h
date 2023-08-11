@@ -37,9 +37,6 @@ typedef enum {
     ERROR_UNKNOWN_NODE_TYPE,
 } ErrorCode;
 
-
-
-
 typedef struct {
     ErrorCode code;
     char *msg;

@@ -67,6 +67,7 @@ struct SymbolTable {
     Scope scope;
     vector children;
     SymbolTable *parent;
+    Arena* arena;
 };
 
 struct ParameterInfo {
@@ -86,7 +87,7 @@ struct ClassInfo {
     vector functions;
 };
 
-SymbolTable* create_table(Scope scope, SymbolTable *parent);
+SymbolTable* create_table(Scope scope, SymbolTable *parent, Arena* arena);
 void destroy_table(SymbolTable *table);
 Symbol* symbol_new(const char *name,  Type* type, Kind kind, SymbolTable* table);
 Symbol* symbol_table_add(SymbolTable *table, const char* name, const char* type, Kind kind);
@@ -98,10 +99,8 @@ SymbolTable* create_and_link_table(Scope scope, SymbolTable* parent);
 SymbolTable* getParent(SymbolTable *table);
 SymbolTable* add_child_table(SymbolTable* parent, Scope scope);
 
-vector parse_jack_stdlib_from_json(const char* json_content);
-FunctionInfo* parse_function_from_json(cJSON* function_json);
+vector parse_jack_stdlib_from_json(const char* json_content, Arena* arena);
 void add_stdlib_table(SymbolTable* global_table, vector jack_os_classes);
-SymbolTable* create_table_for_func(Kind kind, SymbolTable* parent_table);
 
 
 #endif // SYMBOL_H

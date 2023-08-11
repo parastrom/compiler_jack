@@ -9,8 +9,7 @@
 #include "safer.h"
 
 typedef struct {
-    int parsed;
-    int parsed_num;
+    Arena* arena;
     char jack_files[32][128];
     char jack_vm_files[32][128];
     size_t num_of_files;
@@ -20,14 +19,16 @@ typedef struct {
 } CompilerState;
 
 
-int InitCompiler(CompilerState* state) {
+CompilerState* init_compiler() {
+    Arena* arena = init_arena(8 * get_page_size());
+    CompilerState* state = arena_alloc(arena, sizeof(CompilerState));
     memset(state->jack_files, 0, sizeof state->jack_files);
     memset(state->jack_vm_files, 0, sizeof state->jack_vm_files);
-    state->global_table = create_table(SCOPE_GLOBAL, NULL);
     state->num_of_files = 0;
-
-    log_message(LOG_LEVEL_INFO, "Compiler initialized\n");
-    return 1;
+    state->vm_filename = NULL;
+    state->vm_ptr = NULL;
+    state->global_table = create_table(SCOPE_GLOBAL, NULL, arena);
+    return state;
 }
 
 const char* get_file_ext(const char* file_name) {
@@ -118,6 +119,10 @@ int compile(CompilerState* state) {
 
     initialize_eq_classes();
 
+    Arena* stdlib_arena = init_arena(get_page_size());
+    const char* stdlib_json = read_file_into_string(JACK_FILES_DIR);
+    vector jack_os_classes = parse_jack_stdlib_from_json(stdlib_json, stdlib_arena);
+
     vector stdlib_classes = jack_stdlib_setup();
     add_stdlib_table(state->global_table, stdlib_classes);
 
@@ -125,7 +130,7 @@ int compile(CompilerState* state) {
     for (size_t i = 0; i < state->num_of_files; i++) {
         Lexer* lexer = init_lexer(state->jack_files[i]);
         Parser* parser = init_parser(lexer);
-        ClassNode* class_node = parse_class(parser);
+        ASTNode * class_node = parse_class(parser);
         vector_push(program_node->data.program->classes, class_node);
     }
 
@@ -136,17 +141,10 @@ int compile(CompilerState* state) {
 
     ASTVisitor sym_table_builder;
 
-    sym_table_builder.visit_class_node = visit_class_node;
-    sym_table_builder.visit_class_var_dec_node = visit_class_var_dec_node;
-    sym_table_builder.visit_subroutine_dec_node = visit_subroutine_dec_node;
-    sym_table_builder.visit_parameter_list_node = visit_parameter_list_node;
-    sym_table_builder.visit_subroutine_body_node = visit_subroutine_body_node;
-    sym_table_builder.visit_var_dec_node = visit_var_dec_node;
-    sym_table_builder.currentTable = state->global_table;
 
     for(int i = 0 ; i < vector_size(program_node->data.program->classes); i++) {
         // Use the visitor to visit each class node
         ASTNode* class_node = vector_get(program_node->data.program->classes, i);
-        ast_node_accept(class_node, visitor);
+        ast_node_accept(visitor, class_node);
     }
 }

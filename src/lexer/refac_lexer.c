@@ -3,6 +3,8 @@
 #include <string.h>
 #include "safer.h"
 
+#define STACK_CAPACITY 4096
+
 /**
  * The transition table for the DFA.
  */
@@ -179,26 +181,29 @@ void initialize_eq_classes() {
  * @param filename The name of the file to be processed by the lexer - 
  * @return A pointer to the initialized lexer.
  */
-Lexer* init_lexer(const char* filename) {
-    Lexer* lexer = safer_malloc(sizeof(Lexer));
+Lexer* init_lexer(const char* filename, Arena* arena) {
+    Lexer* lexer = arena_alloc(arena, sizeof(Lexer));
     if (lexer == NULL) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for lexer\n");
+        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                  "Could not allocate memory for lexer\n");
         return NULL;
     }
 
     lexer->input = read_file_into_string(filename);
     if (lexer->input == NULL) {
         free(lexer);
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for lexer input\n");
+        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                  "Could not allocate memory for lexer input\n");
         return NULL;
         
     }
-    
+
+    lexer->arena = arena;
     lexer->filename = strdup(filename);
     
     lexer->position = 0;
-    lexer->queue = init_ringbuffer();
-    if (lexer->queue == NULL) {
+    lexer->stack = init_stack(arena, STACK_CAPACITY);
+    if (lexer->stack == NULL) {
         log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for lexer queue\n");
         free(lexer);
         return NULL;
@@ -214,10 +219,6 @@ void destroy_lexer(Lexer* lexer) {
         if (lexer->input != NULL) {
             free(lexer->input);
         }
-        if (lexer->queue != NULL) {
-            ringbuffer_destroy(lexer->queue);
-        }
-        free(lexer);
     }
 }
 
@@ -284,8 +285,8 @@ TokenType determine_token_type(const char* token_str, int old_state) {
 void create_token(Lexer* lexer, int old_state, size_t token_start, size_t token_len, int line) {
     const char* token_str = strndup(lexer->input + token_start, token_len);
     TokenType type = determine_token_type(token_str, old_state);
-    Token* token = new_token(type, token_str, line);
-    ringbuffer_push(lexer->queue, token);
+    Token* token = new_token(type, token_str, line, lexer->arena);
+    stack_push(lexer->stack, token);
 }
 
 /**

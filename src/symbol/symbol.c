@@ -25,7 +25,8 @@ Kind string_to_kind(const char* kind_str) {
  */
 Symbol* symbol_new(const char* name, Type* type, Kind kind, SymbolTable* table) {
     Symbol* symbol = malloc(sizeof(Symbol));
-    symbol->name = strdup(name);
+    symbol->name = arena_alloc(table->arena, strlen(name) + 1);
+    strcpy(symbol->name, name);
     symbol->type = type;
     symbol->kind = kind;
     symbol->table = table;
@@ -48,16 +49,17 @@ void symbol_free(Symbol* symbol) {
  * @param parent 
  * @return SymbolTable* 
  */
-SymbolTable* create_table(Scope scope, SymbolTable* parent) {
-    SymbolTable* table = malloc(sizeof(SymbolTable));
+SymbolTable* create_table(Scope scope, SymbolTable* parent, Arena* arena) {
+    SymbolTable* table = (SymbolTable*) arena_alloc(arena, sizeof(SymbolTable));
+    table->arena = arena;
     table->scope = scope;
     table->parent = parent;
     table->symbols = NULL;
     for (int i = 0; i < KIND_NONE; i++) {
         table->counts[i] = 0;
     }
-    table->symbols = vector_create();
-    table->children = vector_create();
+    table->symbols = vector_create(arena);
+    table->children = vector_create(arena);
 
 
     return table;
@@ -102,7 +104,7 @@ Symbol* symbol_table_add(SymbolTable* table, const char* name, const char* type,
 }
 
 SymbolTable* add_child_table(SymbolTable* parent, Scope scope) {
-    SymbolTable* child = create_table(scope, parent);
+    SymbolTable* child = create_table(scope, parent, parent->arena);
     vector_push(parent->children, child);
     return child;
 }
@@ -179,7 +181,7 @@ const char* type_to_str(Type type) {
 }
 
 vector get_symbols_of_kind(SymbolTable* table, Kind kind) {
-    vector symbols = vector_create();
+    vector symbols = vector_create(table->arena);
     for(int i = 0 ; i < vector_size(table->symbols); i++) {
         Symbol* symbol = vector_get(table->symbols, i);
         if (symbol->kind == kind) {
@@ -195,61 +197,15 @@ vector get_symbols_of_kind(SymbolTable* table, Kind kind) {
  * @param table 
  */
 void destroy_table(SymbolTable* table) {
-    for (int i = 0; i < vector_size(table->symbols); i++) {
-        Symbol* symbol = vector_get(table->symbols, i);
-        symbol_free(symbol);
-    }
     vector_destroy(table->symbols);
-    free(table);
 }
 
-vector parse_jack_stdlib_from_json(const char* json_content) {
-    cJSON *root = cJSON_Parse(json_content);
-    if (root == NULL) {
-        // Handle parsing error
-        log_error(ERROR_JSON_PARSING, __FILE__, __LINE__, cJSON_GetErrorPtr());
-        exit(EXIT_FAILURE);
-    }
-
-    vector std_classes = vector_create();
-
-    // Iterate over each class in the JSON
-    cJSON *class_item = NULL;
-    cJSON_ArrayForEach(class_item, root) {
-        ClassInfo *class_info = safer_malloc(sizeof(ClassInfo));
-
-        // The class name is the key for this item
-        class_info->name = strdup(class_item->string);
-        class_info->functions = vector_create();
-
-        cJSON *functions_array = cJSON_GetObjectItem(class_item, "functions");
-        cJSON *function_item = NULL;
-        cJSON_ArrayForEach(function_item, functions_array) {
-            FunctionInfo* function_info = parse_function_from_json(function_item);
-            vector_push(class_info->functions, function_info);
-        }
-
-        cJSON *methods_array = cJSON_GetObjectItem(class_item, "methods");
-        cJSON *method_item = NULL;
-        cJSON_ArrayForEach(method_item, methods_array) {
-            FunctionInfo* method_info = parse_function_from_json(method_item);
-            vector_push(class_info->functions, method_info);
-        }
-
-        vector_push(std_classes, class_info);
-    }
-
-    cJSON_Delete(root);
-
-    return std_classes;
-}
-
-FunctionInfo* parse_function_from_json(cJSON* function_json) {
+FunctionInfo* parse_function_from_json(cJSON* function_json, Arena* arena) {
     FunctionInfo *function_info = safer_malloc(sizeof(FunctionInfo));
     function_info->name = strdup(cJSON_GetObjectItem(function_json, "name")->valuestring);
     function_info->return_type = strdup(cJSON_GetObjectItem(function_json, "return_type")->valuestring);
     function_info->kind = string_to_kind(cJSON_GetObjectItem(function_json, "kind")->valuestring);
-    function_info->parameters = vector_create();
+    function_info->parameters = vector_create(arena);
 
     cJSON *params = cJSON_GetObjectItem(function_json, "parameters");
     cJSON *param_item = NULL;
@@ -262,6 +218,63 @@ FunctionInfo* parse_function_from_json(cJSON* function_json) {
 
     return function_info;
 }
+
+vector parse_jack_stdlib_from_json(const char* json_content, Arena* arena) {
+    cJSON *root = cJSON_Parse(json_content);
+    if (root == NULL) {
+        // Handle parsing error
+        log_error(ERROR_JSON_PARSING, __FILE__, __LINE__, cJSON_GetErrorPtr());
+        exit(EXIT_FAILURE);
+    }
+
+    vector std_classes = vector_create(arena);
+
+    // Iterate over each class in the JSON
+    cJSON *class_item = NULL;
+    cJSON_ArrayForEach(class_item, root) {
+        ClassInfo *class_info = safer_malloc(sizeof(ClassInfo));
+
+        // The class name is the key for this item
+        class_info->name = strdup(class_item->string);
+        class_info->functions = vector_create(arena);
+
+        cJSON *functions_array = cJSON_GetObjectItem(class_item, "functions");
+        cJSON *function_item = NULL;
+        cJSON_ArrayForEach(function_item, functions_array) {
+            FunctionInfo* function_info = parse_function_from_json(function_item, arena);
+            vector_push(class_info->functions, function_info);
+        }
+
+        cJSON *methods_array = cJSON_GetObjectItem(class_item, "methods");
+        cJSON *method_item = NULL;
+        cJSON_ArrayForEach(method_item, methods_array) {
+            FunctionInfo* method_info = parse_function_from_json(method_item, arena);
+            vector_push(class_info->functions, method_info);
+        }
+
+        vector_push(std_classes, class_info);
+    }
+
+    cJSON_Delete(root);
+
+    return std_classes;
+}
+
+SymbolTable* create_table_for_func(Kind kind, SymbolTable* parent_table) {
+    switch(kind) {
+        case KIND_CONSTRUCTOR:
+            return create_table(SCOPE_CONSTRUCTOR, parent_table, parent_table->arena);
+        case KIND_METHOD:
+            return create_table(SCOPE_METHOD, parent_table, parent_table->arena);
+        case KIND_FUNCTION:
+            return create_table(SCOPE_FUNCTION, parent_table, parent_table->arena);
+        default:
+            log_error(ERROR_SEMANTIC_INVALID_SCOPE, __FILE__, __LINE__, "Invalid function kind");
+            exit(EXIT_FAILURE);
+    }
+}
+
+
 
 void add_stdlib_table(SymbolTable* global_table, vector jack_os_classes) {
     for (int i = 0; i < vector_size(jack_os_classes); i++) {
@@ -286,19 +299,7 @@ void add_stdlib_table(SymbolTable* global_table, vector jack_os_classes) {
     }
 }
 
-SymbolTable* create_table_for_func(Kind kind, SymbolTable* parent_table) {
-    switch(kind) {
-        case KIND_CONSTRUCTOR:
-            return create_table(SCOPE_CONSTRUCTOR, parent_table);
-        case KIND_METHOD:
-            return create_table(SCOPE_METHOD, parent_table);
-        case KIND_FUNCTION:
-            return create_table(SCOPE_FUNCTION, parent_table);
-        default:
-            log_error(ERROR_SEMANTIC_INVALID_SCOPE, __FILE__, __LINE__, "Invalid function kind");
-            exit(EXIT_FAILURE);
-    }
-}
+
 
 
 

@@ -2,67 +2,183 @@
 #include "symbol.h"
 #include <string.h>
 
-void ast_node_accept(ASTNode* node, ASTVisitor* visitor) {
-    if(visitor->visit_ast_node) {
-        visitor->visit_ast_node(node);
+ASTNode* init_ast_node(ASTNodeType type, Arena* arena) {
+    ASTNode* node = (ASTNode*) arena_alloc(arena, sizeof(ASTNode));
+    node->nodeType = type;
+
+    switch (type) {
+        case NODE_PROGRAM:
+            node->data.program = (ProgramNode*) arena_alloc(arena,sizeof(ProgramNode));
+            node->data.program->classes = vector_create(arena);
+            break;
+        case NODE_CLASS:
+            node->data.classDec = (ClassNode*) arena_alloc(arena,sizeof(ClassNode));
+            node->data.classDec->className = NULL;
+            node->data.classDec->classVarDecs = vector_create(arena);
+            node->data.classDec->subroutineDecs = vector_create(arena);
+            break;
+        case NODE_CLASS_VAR_DEC:
+            node->data.classVarDec = (ClassVarDecNode*) arena_alloc(arena,sizeof(ClassVarDecNode));
+            node->data.classVarDec->classVarModifier = CVAR_NONE;
+            node->data.classVarDec->varType = NULL;
+            node->data.classVarDec->varNames = vector_create(arena);
+            break;
+        case NODE_SUBROUTINE_DEC:
+            node->data.subroutineDec = (SubroutineDecNode*) arena_alloc(arena,sizeof(SubroutineDecNode));
+            node->data.subroutineDec->subroutineType = SUB_NONE;
+            node->data.subroutineDec->returnType = NULL;
+            node->data.subroutineDec->subroutineName = NULL;
+            node->data.subroutineDec->parameters = NULL;
+            node->data.subroutineDec->body = NULL;
+            break;
+        case NODE_PARAMETER_LIST:
+            node->data.parameterList =  (ParameterListNode*) arena_alloc(arena,sizeof(ParameterListNode));
+            node->data.parameterList->parameterTypes = vector_create(arena);
+            node->data.parameterList->parameterNames = vector_create(arena);
+            break;
+        case NODE_SUBROUTINE_BODY:
+            node->data.subroutineBody = (SubroutineBodyNode*) arena_alloc(arena,sizeof(SubroutineBodyNode));
+            node->data.subroutineBody->varDecs = vector_create(arena);
+            node->data.subroutineBody->statements = NULL;
+            break;
+        case NODE_VAR_DEC:
+            node->data.varDec = (VarDecNode*) arena_alloc(arena,sizeof(VarDecNode));
+            node->data.varDec->varType = NULL;
+            node->data.varDec->varNames = vector_create(arena);
+            break;
+        case NODE_STATEMENTS:
+            node->data.statements = (StatementsNode*) arena_alloc(arena,sizeof(StatementsNode));
+            node->data.statements->statements = vector_create(arena);
+            break;
+        case NODE_STATEMENT:
+            node->data.statement = (StatementNode*) arena_alloc(arena,sizeof(StatementNode));
+            node->data.statement->statementType = STMT_NONE;
+            node->data.statement->data.letStatement = NULL;
+            node->data.statement->data.ifStatement = NULL;
+            node->data.statement->data.whileStatement = NULL;
+            node->data.statement->data.doStatement = NULL;
+            node->data.statement->data.returnStatement = NULL;
+            break;
+        case NODE_LET_STATEMENT:
+            node->data.letStatement = (LetStatementNode*) arena_alloc(arena,sizeof(LetStatementNode));
+            node->data.letStatement->varName = NULL;
+            node->data.letStatement->indexExpression = NULL;
+            node->data.letStatement->rightExpression = NULL;
+            break;
+        case NODE_IF_STATEMENT:
+            node->data.ifStatement = (IfStatementNode*) arena_alloc(arena,sizeof(IfStatementNode));
+            node->data.ifStatement->condition = NULL;
+            node->data.ifStatement->ifBranch = NULL;
+            node->data.ifStatement->elseBranch = NULL;
+            break;
+        case NODE_WHILE_STATEMENT:
+            node->data.whileStatement = (WhileStatementNode*) arena_alloc(arena,sizeof(WhileStatementNode));
+            node->data.whileStatement->condition = NULL;
+            node->data.whileStatement->body = NULL;
+            break;
+        case NODE_DO_STATEMENT:
+            node->data.doStatement = (DoStatementNode*) arena_alloc(arena,sizeof(DoStatementNode));
+            node->data.doStatement->subroutineCall = NULL;
+            break;
+        case NODE_RETURN_STATEMENT:
+            node->data.returnStatement = (ReturnStatementNode*) arena_alloc(arena,sizeof(ReturnStatementNode));
+            node->data.returnStatement->expression = NULL;
+            break;
+        case NODE_SUBROUTINE_CALL:
+            node->data.subroutineCall = (SubroutineCallNode*) arena_alloc(arena,sizeof(SubroutineCallNode));
+            node->data.subroutineCall->caller = NULL;
+            node->data.subroutineCall->subroutineName = NULL;
+            node->data.subroutineCall->arguments = vector_create(arena);
+            break;
+        case NODE_EXPRESSION:
+            node->data.expression = (ExpressionNode*) arena_alloc(arena,sizeof(ExpressionNode));
+            node->data.expression->term = NULL;
+            node->data.expression->operations = vector_create(arena);
+            break;
+        case NODE_TERM:
+            node->data.term = (TermNode*) arena_alloc(arena,sizeof(TermNode));
+            node->data.term->termType = TRM_NONE;
+            break;
+        case NODE_OPERATION:
+            node->data.operation =  (Operation*) arena_alloc(arena,sizeof(Operation));
+            node->data.operation->op = 0;
+            node->data.operation->term = NULL;
+            break;
+        case NODE_VAR_TERM:
+            node->data.varTerm = (VarTerm*) arena_alloc(arena,sizeof(VarTerm));
+            node->data.varTerm->className = NULL;
+            node->data.varTerm->varName = NULL;
+            break;
+        default:
+            log_error(ERROR_UNKNOWN_NODE_TYPE, __FILE__, __LINE__, "Unknown node type: %d\n", type);
+            exit(EXIT_FAILURE);
+    }
+
+    return node;
+}
+
+void execute_build_function(ASTVisitor* visitor, ASTNode* node) {
+    typedef void (*BuilderFunc)(ASTVisitor*, ASTNode*);
+    BuilderFunc buildFunctions[] = {
+            [NODE_PROGRAM] = visitor->symbolTableBuilder->build_program_node,
+            [NODE_CLASS] = visitor->symbolTableBuilder->build_class_node,
+            [NODE_CLASS_VAR_DEC] = visitor->symbolTableBuilder->build_class_var_dec_node,
+            [NODE_SUBROUTINE_DEC] = visitor->symbolTableBuilder->build_subroutine_dec_node,
+            [NODE_PARAMETER_LIST] = visitor->symbolTableBuilder->build_parameter_list_node,
+            [NODE_SUBROUTINE_BODY] = visitor->symbolTableBuilder->build_subroutine_body,
+            [NODE_VAR_DEC]  = visitor->symbolTableBuilder->build_var_dec_node
+    };
+
+    if(node->nodeType < sizeof(buildFunctions)/sizeof(BuilderFunc) && buildFunctions[node->nodeType]) {
+        buildFunctions[node->nodeType](visitor, node);
+    } else {
+        log_message(LOG_LEVEL_WARNING, __FILE__, __LINE__, "Unsupported node type for building");
+    }
+
+}
+
+void execute_analyze_function(ASTVisitor* visitor, ASTNode* node) {
+    typedef void (*AnalyzerFunc)(ASTVisitor*, ASTNode*);
+    AnalyzerFunc analyzeFunctions[] = {
+         [NODE_PROGRAM] = visitor->semanticAnalyzer->analyze_program_node,
+         [NODE_CLASS] = visitor->semanticAnalyzer->analyze_class_node,
+         [NODE_CLASS_VAR_DEC] = visitor->semanticAnalyzer->analyze_class_var_dec_node,
+         [NODE_SUBROUTINE_DEC] = visitor->semanticAnalyzer->analyze_subroutine_dec_node,
+         [NODE_PARAMETER_LIST] = visitor->semanticAnalyzer->analyze_parameter_list_node,
+         [NODE_SUBROUTINE_BODY] = visitor->semanticAnalyzer->analyze_subroutine_body_node,
+         [NODE_STATEMENTS] = visitor->semanticAnalyzer->analyze_statements,
+         [NODE_LET_STATEMENT] = visitor->semanticAnalyzer->analyze_let_statement_node,
+         [NODE_IF_STATEMENT] = visitor->semanticAnalyzer->analyze_if_statement_node,
+         [NODE_WHILE_STATEMENT] = visitor->semanticAnalyzer->analyze_while_statement_node,
+         [NODE_DO_STATEMENT] = visitor->semanticAnalyzer->analyze_do_statement_node,
+         [NODE_RETURN_STATEMENT] = visitor->semanticAnalyzer->analyze_return_statement_node,
+         [NODE_SUBROUTINE_CALL] = visitor->semanticAnalyzer->analyze_subroutine_call_node,
+         [NODE_EXPRESSION] = visitor->semanticAnalyzer->analyze_expression_node,
+         [NODE_TERM] = visitor->semanticAnalyzer->analyze_term_node,
+         [NODE_OPERATION] = visitor->semanticAnalyzer->analyze_operation_node,
+         [NODE_VAR_TERM] = visitor->semanticAnalyzer->analyze_var_term_node,
+     };
+     if(node->nodeType < sizeof(analyzeFunctions)/sizeof(AnalyzerFunc) && analyzeFunctions[node->nodeType]) {
+        analyzeFunctions[node->nodeType](visitor, node);
+    } else {
+        log_message(LOG_LEVEL_WARNING, __FILE__, __LINE__, "Unsupported node type for analyzing");
     }
 }
 
-void visit_ast_node(ASTVisitor* visitor, ASTNode* node) {
-    switch (node->nodeType) {
-        case NODE_CLASS:
-            visit_class_node(visitor, node);
+void ast_node_accept(ASTVisitor *visitor, ASTNode *node) {
+    if (!visitor || !node) {
+        log_message(LOG_LEVEL_ERROR, __FILE__, __LINE__, "Null visitor or node provided");
+        return;
+    }
+    switch (visitor->phase) {
+        case BUILD:
+            execute_build_function(visitor, node);
             break;
-        case NODE_CLASS_VAR_DEC:
-            visit_class_var_dec_node(visitor, node);
-            break;
-        case NODE_SUBROUTINE_DEC:
-            visit_subroutine_dec_node(visitor, node);
-            break;
-        case NODE_PARAMETER_LIST:
-            visit_parameter_list_node(visitor, node);
-            break;
-        case NODE_SUBROUTINE_BODY:
-            visit_subroutine_body_node(visitor, node);
-            break;
-        case NODE_VAR_DEC:
-            visit_var_dec_node(visitor, node);
-            break;
-        case NODE_STATEMENTS:
-            visit_statements_node(visitor, node);
-            break;
-        case NODE_STATEMENT:
-            visit_statement_node(visitor, node);
-            break;
-        case NODE_LET_STATEMENT:
-            visit_let_statement_node(visitor, node);
-            break;
-        case NODE_IF_STATEMENT:
-            visit_if_statement_node(visitor, node);
-            break;
-        case NODE_WHILE_STATEMENT:
-            visit_while_statement_node(visitor, node);
-            break;
-        case NODE_DO_STATEMENT:
-            visit_do_statement_node(visitor, node);
-            break;
-        case NODE_RETURN_STATEMENT:
-            visit_return_statement_node(visitor, node);
-            break;
-        case NODE_SUBROUTINE_CALL:
-            visit_subroutine_call_node(visitor, node);
-            break;
-        case NODE_EXPRESSION:
-            visit_expression_node(visitor, node);
-            break;
-        case NODE_TERM:
-            visit_term_node(visitor, node);
-            break;
-        case NODE_OPERATION:
-            visit_operation(visitor, node);
+        case ANALYZE:
+            execute_analyze_function(visitor, node);
             break;
         default:
-            log_error(ERROR_UNKNOWN_NODE_TYPE, __FILE__, __LINE__, "Unknown node type: %d\n", node->nodeType);
+            log_message(LOG_LEVEL_INFO, __FILE__, __LINE__, "Unsupported phase");
             exit(EXIT_FAILURE);
     }
 }
@@ -81,9 +197,18 @@ void pop_table(ASTVisitor* visitor) {
     }
 }
 
+void build_program_node(ASTVisitor* visitor, ASTNode* node) {
+    ProgramNode* programNode = node->data.program;
+
+    for(int i = 0; i < vector_size(programNode->classes); i++) {
+        ASTNode* classNode = (ASTNode*) vector_get(programNode->classes, i);
+        ast_node_accept(visitor, classNode);
+    }
+}
+
 void build_class_node(ASTVisitor* visitor, ASTNode* node) {
-    SymbolTable* classTable = create_table(SCOPE_CLASS, visitor->currentTable);
-    Symbol* classSymbol = symbol_table_add(classTable, node->data.classDec->className,
+    SymbolTable* classTable = create_table(SCOPE_CLASS, visitor->currentTable, visitor->arena);
+    Symbol* classSymbol = symbol_table_add(visitor->currentTable, node->data.classDec->className,
                                            node->data.classDec->className, KIND_CLASS);
     classSymbol->childTable = classTable;
 
@@ -91,11 +216,11 @@ void build_class_node(ASTVisitor* visitor, ASTNode* node) {
 
     for (int i = 0; i < vector_size(node->data.classDec->classVarDecs); i++) {
         ASTNode* classVarDecNode =  (ASTNode*) vector_get(node->data.classDec->classVarDecs, i);
-        ast_node_accept(classVarDecNode, visitor);
+        ast_node_accept(visitor, classVarDecNode);
     }
     for (int i = 0; i < vector_size(node->data.classDec->subroutineDecs); i++) {
         ASTNode* subroutineDecNode = (ASTNode*) vector_get(node->data.classDec->subroutineDecs, i);
-        ast_node_accept(subroutineDecNode, visitor);
+        ast_node_accept(visitor, subroutineDecNode);
     }
     pop_table(visitor);
 }
@@ -128,17 +253,17 @@ void build_subroutine_dec_node(ASTVisitor* visitor, ASTNode* node) {
 
     switch(node->data.subroutineDec->subroutineType) {
         case CONSTRUCTOR:
-            subroutineTable = create_table(SCOPE_CONSTRUCTOR, visitor->currentTable);
+            subroutineTable = create_table(SCOPE_CONSTRUCTOR, visitor->currentTable, visitor->arena);
             subSymbol = symbol_table_add(visitor->currentTable, node->data.subroutineDec->subroutineName,
                 node->data.subroutineDec->returnType, KIND_CONSTRUCTOR);
             break;
         case METHOD:
-            subroutineTable = create_table(SCOPE_METHOD, visitor->currentTable);
+            subroutineTable = create_table(SCOPE_METHOD, visitor->currentTable, visitor->arena);
             subSymbol =symbol_table_add(visitor->currentTable, node->data.subroutineDec->subroutineName,
                 node->data.subroutineDec->returnType, KIND_METHOD);
             break;
         case FUNCTION:
-            subroutineTable = create_table(SCOPE_FUNCTION, visitor->currentTable);
+            subroutineTable = create_table(SCOPE_FUNCTION, visitor->currentTable, visitor->arena);
             subSymbol = symbol_table_add(visitor->currentTable, node->data.subroutineDec->subroutineName,
                 node->data.subroutineDec->returnType, KIND_FUNCTION);
             break;
@@ -146,13 +271,12 @@ void build_subroutine_dec_node(ASTVisitor* visitor, ASTNode* node) {
             log_error(ERROR_SEMANTIC_INVALID_SUBROUTINE, __FILE__, __LINE__,
                       "Invalid subroutine type");
             exit(EXIT_FAILURE);
-            break;
     }
 
     subSymbol->childTable = subroutineTable;
     push_table(visitor, subroutineTable);
-    ast_node_accept(node->data.subroutineDec->parameters, visitor);
-    ast_node_accept(node->data.subroutineDec->body, visitor);
+    ast_node_accept(visitor, node->data.subroutineDec->parameters);
+    ast_node_accept(visitor, node->data.subroutineDec->body);
     pop_table(visitor);
 }
 
@@ -168,7 +292,7 @@ void build_parameter_list_node(ASTVisitor* visitor, ASTNode* node) {
 void build_subroutine_body_node(ASTVisitor* visitor, ASTNode* node) {
     for (int i = 0; i < vector_size(node->data.subroutineBody->varDecs); i++) {
         ASTNode* varDecNode = vector_get(node->data.subroutineBody->varDecs, i);
-        ast_node_accept(varDecNode, visitor);
+        ast_node_accept(visitor, varDecNode);
     }
 }
 
@@ -179,6 +303,14 @@ void build_var_dec_node(ASTVisitor* visitor, ASTNode* node) {
     }
 }
 
+void analyze_program_node(ASTVisitor* visitor, ASTNode* node) {
+    ProgramNode* programNode = node->data.program;
+
+    for(int i = 0; i < vector_size(programNode->classes); i++) {
+        ASTNode* classNode = (ASTNode*) vector_get(programNode->classes, i);
+        ast_node_accept(visitor, classNode);
+    }
+}
 
 void analyze_class_node(ASTVisitor* visitor, ASTNode* node) {
     visitor->currentClassName = node->data.classDec->className;
@@ -198,17 +330,15 @@ void analyze_class_node(ASTVisitor* visitor, ASTNode* node) {
     // Analyze class_var_decs  & subroutine_decs
     for (int i = 0; i < vector_size(node->data.classDec->classVarDecs); i++) {
         ASTNode* classVarDecNode =  (ASTNode*) vector_get(node->data.classDec->classVarDecs, i);
-        ast_node_accept(classVarDecNode, visitor);
+        ast_node_accept(visitor, classVarDecNode);
     }
 
     for (int i = 0; i < vector_size(node->data.classDec->subroutineDecs); i++) {
         ASTNode* subroutineDecNode = (ASTNode*) vector_get(node->data.classDec->subroutineDecs, i);
-        ast_node_accept(subroutineDecNode, visitor);
+        ast_node_accept(visitor, subroutineDecNode);
     }
-
     // Return to the parent scope
     pop_table(visitor);
-
     visitor->currentClassName = NULL;
 }
 
@@ -235,8 +365,8 @@ void analyze_subroutine_dec_node(ASTVisitor* visitor, ASTNode* node) {
     }
 
     push_table(visitor, subSymbol->childTable);
-    ast_node_accept(node->data.subroutineDec->parameters, visitor);
-    ast_node_accept(node->data.subroutineDec->body, visitor);
+    ast_node_accept(visitor, node->data.subroutineDec->parameters);
+    ast_node_accept(visitor, node->data.subroutineDec->body);
     pop_table(visitor);
 }
 
@@ -264,7 +394,7 @@ void analyze_subroutine_body_node(ASTVisitor* visitor, ASTNode* node) {
         }
     }
 
-    ast_node_accept(node->data.subroutineBody->statements, visitor);
+    ast_node_accept(visitor, node->data.subroutineBody->statements);
 }
 
 // Var Dec analysis done in subroutine dec
@@ -272,14 +402,14 @@ void analyze_var_dec_node(ASTVisitor* visitor, ASTNode* node) {
 
 }
 
-void analyze_statements(ASTVisitor* visitor, ASTNode* node) {
+void analyze_statements_node(ASTVisitor* visitor, ASTNode* node) {
     for(int i = 0; i < vector_size(node->data.statements->statements); i++) {
         ASTNode* stmtNode = (ASTNode*) vector_get(node->data.statements->statements, i);
-        ast_node_accept(stmtNode, visitor);
+        ast_node_accept(visitor, stmtNode);
     }
 }
 
-void analyze_let_statement(ASTVisitor* visitor, ASTNode* node) {
+void analyze_let_statement_node(ASTVisitor* visitor, ASTNode* node) {
 
     LetStatementNode* letStmtNode = node->data.letStatement;
     char* varName = letStmtNode->varName;
@@ -291,7 +421,7 @@ void analyze_let_statement(ASTVisitor* visitor, ASTNode* node) {
     }
 
     if(letStmtNode->indexExpression) {
-        ast_node_accept(letStmtNode->indexExpression, visitor);
+        ast_node_accept(visitor, letStmtNode->indexExpression);
         Type indexExprType = letStmtNode->indexExpression->data.expression->type;
         if(indexExprType.userDefinedType != TYPE_INT) {
             log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
@@ -302,7 +432,7 @@ void analyze_let_statement(ASTVisitor* visitor, ASTNode* node) {
         // May need to confirm varName is an array
     }
 
-    ast_node_accept(letStmtNode->rightExpression, visitor);
+    ast_node_accept(visitor, letStmtNode->rightExpression);
     Type rightExprType =  letStmtNode->rightExpression->data.expression->type;
     if(types_are_equal(rightExprType, *varSymbol->type)) {
         log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
@@ -311,10 +441,10 @@ void analyze_let_statement(ASTVisitor* visitor, ASTNode* node) {
     }
 }
 
-void analyze_if_statement(ASTVisitor* visitor, ASTNode* node) {
+void analyze_if_statement_node(ASTVisitor* visitor, ASTNode* node) {
     IfStatementNode* ifStmtNode = node->data.ifStatement;
 
-    ast_node_accept(ifStmtNode->condition, visitor);
+    ast_node_accept(visitor, ifStmtNode->condition);
     Type conditionType = ifStmtNode->condition->data.expression->type;
     if (conditionType.basicType != TYPE_BOOLEAN) {
         log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
@@ -322,18 +452,18 @@ void analyze_if_statement(ASTVisitor* visitor, ASTNode* node) {
         exit(EXIT_FAILURE);
     }
 
-    ast_node_accept(ifStmtNode->ifBranch, visitor);
+    ast_node_accept(visitor, ifStmtNode->ifBranch);
 
     if(ifStmtNode->elseBranch) {
-        ast_node_accept(ifStmtNode->elseBranch, visitor);
+        ast_node_accept(visitor, ifStmtNode->elseBranch);
     }
 }
 
-void analyze_while_statement(ASTVisitor* visitor, ASTNode* node) {
+void analyze_while_statement_node(ASTVisitor* visitor, ASTNode* node) {
     WhileStatementNode* whileStmtNode = node->data.whileStatement;
 
     // Analyze the condition expression
-    ast_node_accept(whileStmtNode->condition, visitor);
+    ast_node_accept(visitor, whileStmtNode->condition);
     Type conditionType = whileStmtNode->condition->data.expression->type;
 
     // Ensure the condition evaluates to a boolean
@@ -344,18 +474,18 @@ void analyze_while_statement(ASTVisitor* visitor, ASTNode* node) {
     }
 
     // Recursively analyze the statements inside the 'while' block
-    ast_node_accept(whileStmtNode->body, visitor);
+    ast_node_accept(visitor, whileStmtNode->body);
 }
 
 
-void analyze_do_statement(ASTVisitor* visitor, ASTNode* node) {
+void analyze_do_statement_node(ASTVisitor* visitor, ASTNode* node) {
     DoStatementNode* doStmtNode = node->data.doStatement;
 
     // Analyze the subroutine call
-    ast_node_accept(doStmtNode->subroutineCall, visitor);
+    ast_node_accept(visitor, doStmtNode->subroutineCall);
 }
 
-void analyze_return_statement(ASTVisitor* visitor, ASTNode* node) {
+void analyze_return_statement_node(ASTVisitor* visitor, ASTNode* node) {
     // A Return statement can only be reached within a subroutine node
     SymbolTable* parent = visitor->currentTable->parent;
     Symbol* subSymbol;
@@ -379,7 +509,7 @@ void analyze_return_statement(ASTVisitor* visitor, ASTNode* node) {
                       "Return expression type: (%s) , mismatch with subroutine return type (%s)",
                       type_to_str(returnStmt->expression->data.expression->type), type_to_str(*subroutineType));
         }
-        ast_node_accept(returnStmt->expression, visitor);
+        ast_node_accept(visitor, returnStmt->expression);
     } else {
         // When return format is just 'return;', subroutine type should be void
         if (subroutineType->basicType != TYPE_VOID) {
@@ -391,7 +521,7 @@ void analyze_return_statement(ASTVisitor* visitor, ASTNode* node) {
     }
 }
 
-void analyze_term(ASTVisitor* visitor, ASTNode* node) {
+void analyze_term_node(ASTVisitor* visitor, ASTNode* node) {
     TermNode* termNode = node->data.term;
     char* keyword = termNode->data.keywordValue;
 
@@ -423,8 +553,9 @@ void analyze_term(ASTVisitor* visitor, ASTNode* node) {
         case VAR_TERM:
         case SUBROUTINE_CALL:
         case EXPRESSION:
+            ast_node_accept(visitor, node);
         case UNARY_OP:
-            ast_node_accept( node, visitor);
+            analyze_unary_op(visitor,node);
             break;
         default:
             log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__, "Invalid term type");
@@ -467,14 +598,14 @@ bool types_are_equal(Type type1, Type type2) {
 }
 
 
-void analyze_expression(ASTVisitor* visitor, ASTNode* node) {
-    ast_node_accept( node->data.expression->term, visitor);
+void analyze_expression_node(ASTVisitor* visitor, ASTNode* node) {
+    ast_node_accept(visitor, node->data.expression->term);
     Type curType = node->data.expression->term->data.term->type;
 
     for (int i = 0; i < vector_size(node->data.expression->operations); i++) {
         ASTNode *opNode = (ASTNode *) vector_get(node->data.expression->operations, i);
 
-        ast_node_accept( opNode->data.operation->term, visitor);
+        ast_node_accept(visitor, opNode->data.operation->term);
         Type nextType = opNode->data.operation->term->data.term->type;
 
         switch (opNode->data.operation->op) {
@@ -522,7 +653,7 @@ void analyze_expression(ASTVisitor* visitor, ASTNode* node) {
 }
 
 
-void analyze_subroutine_call(ASTVisitor* visitor, ASTNode* node){
+void analyze_subroutine_call_node(ASTVisitor* visitor, ASTNode* node){
     SubroutineCallNode * subCall =  node->data.subroutineCall;
 
     Symbol* subSymbol = symbol_table_lookup(visitor->currentTable, subCall->subroutineName , LOOKUP_GLOBAL);
@@ -552,7 +683,7 @@ void analyze_subroutine_call(ASTVisitor* visitor, ASTNode* node){
     //Check Arguments
     for(int i = 0; i < vector_size(subCall->arguments); i++) {
         ASTNode* arg = vector_get(subCall->arguments, i);
-        ast_node_accept(arg, visitor);
+        ast_node_accept(visitor, arg);
         Type argType = arg->data.expression->term->data.term->type;
         Symbol* expectedArgSymbol = vector_get(args, i);
         if (expectedArgSymbol->type->basicType != argType.basicType ||
@@ -564,7 +695,7 @@ void analyze_subroutine_call(ASTVisitor* visitor, ASTNode* node){
     }
 }
 
-void analyze_var_term(ASTVisitor* visitor, ASTNode* node) {
+void analyze_var_term_node(ASTVisitor* visitor, ASTNode* node) {
     VarTerm* term = node->data.varTerm;
 
     Symbol* termSymbol = symbol_table_lookup(visitor->currentTable, term->varName, LOOKUP_CLASS);
@@ -586,10 +717,10 @@ void analyze_var_term(ASTVisitor* visitor, ASTNode* node) {
     node->data.term->type = *termSymbol->type;
 }
 
-void analyze_unary_op(ASTVisitor* visitor, ASTNode* node) {
+void analyze_unary_op_node(ASTVisitor* visitor, ASTNode* node) {
 
     ASTNode* unaryOpTerm = node->data.term->data.unaryOp.term;
-    ast_node_accept(unaryOpTerm, visitor);
+    ast_node_accept(visitor, unaryOpTerm);
     char op = node->data.term->data.unaryOp.unaryOp;
     Type type = unaryOpTerm->data.term->type;
 
