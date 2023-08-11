@@ -159,6 +159,7 @@ struct ASTNode {
         VarTerm* varTerm;
     } data;
 };
+
 typedef struct {
     void (*build_program_node)(ASTVisitor*, ASTNode*);
     void (*build_class_node)(ASTVisitor*, ASTNode*);
@@ -169,21 +170,21 @@ typedef struct {
 } SymbolTableBuilder;
 
 typedef struct {
-    void (*visit_program_node)(ASTVisitor*, ASTNode*);
-    void (*visit_class_node)(ASTVisitor*, ASTNode*);
-    void (*visit_subroutine_dec_node)(ASTVisitor*, ASTNode*);
-    void (*visit_parameter_list_node)(ASTVisitor*, ASTNode*);
-    void (*visit_var_dec_node)(ASTVisitor*, ASTNode*);
-    void (*visit_let_statement_node)(ASTVisitor*, ASTNode*);
-    void (*visit_if_statement_node)(ASTVisitor*, ASTNode*);
-    void (*visit_while_statement_node)(ASTVisitor*, ASTNode*);
-    void (*visit_do_statement_node)(ASTVisitor*, ASTNode*);
-    void (*visit_return_statement_node)(ASTVisitor*, ASTNode*);
-    void (*visit_subroutine_call_node)(ASTVisitor*, ASTNode*);
-    void (*visit_expression_node)(ASTVisitor*, ASTNode*);
-    void (*visit_term_node)(ASTVisitor*, ASTNode*);
-    void (*visit_operation_node)(ASTVisitor*, ASTNode*);
-    void (*visit_var_term_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_program_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_class_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_subroutine_dec_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_parameter_list_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_var_dec_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_let_statement_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_if_statement_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_while_statement_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_do_statement_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_return_statement_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_subroutine_call_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_expression_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_term_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_operation_node)(ASTVisitor*, ASTNode*);
+    void (*analyze_var_term_node)(ASTVisitor*, ASTNode*);
 } SemanticAnalyzer;
 
 typedef enum {
@@ -401,6 +402,7 @@ bool type_arithmetic_compat(Type type1, Type type2);
 bool type_comparison_compat(Type type1, Type type2);
 bool type_is_boolean(Type type);
 bool type_is_valid(ASTVisitor* visitor, Type* type);
+bool types_are_equal(Type type1, Type);
 void analyze_class_node(ASTVisitor* visitor, ASTNode* node);
 void analyze_class_var_dec_node(ASTVisitor* visitor, ASTNode* node);
 void analyze_subroutine_dec_node(ASTVisitor* visitor, ASTNode* node);

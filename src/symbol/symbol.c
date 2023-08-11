@@ -86,6 +86,9 @@ Symbol* symbol_table_add(SymbolTable* table, const char* name, const char* type,
     } else if (strcmp(type, "String") == 0) {
         symbolType.basicType = TYPE_STRING;
         symbolType.userDefinedType = NULL;
+    } else if (strcmp(type, "void") == 0 ){
+        symbolType.basicType = TYPE_VOID;
+        symbolType.userDefinedType = NULL;
     } else {
         symbolType.basicType = TYPE_USER_DEFINED;
         symbolType.userDefinedType = strdup(type);
@@ -107,12 +110,13 @@ SymbolTable* add_child_table(SymbolTable* parent, Scope scope) {
 
 /**
  * @brief Returns the number of variables of the given kind.
- * 
- * @param table 
- * @param name 
- * @return Symbol* 
+ *
+ * @param table
+ * @param name
+ * @return Symbol*
  */
-Symbol* symbol_table_lookup(SymbolTable* table, char* name) {
+
+Symbol* symbol_table_lookup(SymbolTable* table, char* name, Depth depth) {
     // Current table lookup
     for (int i = 0; i < vector_size(table->symbols); ++i) {
         Symbol* symbol = (Symbol*)vector_get(table->symbols, i);
@@ -121,17 +125,29 @@ Symbol* symbol_table_lookup(SymbolTable* table, char* name) {
         }
     }
 
+    if (depth == LOOKUP_LOCAL) {
+        return NULL;
+    }
+
+    if (depth == LOOKUP_CLASS && (table->scope == SCOPE_METHOD || table->scope == SCOPE_FUNCTION || table->scope == SCOPE_CONSTRUCTOR)) {
+        // Look only in the parent (class scope)
+        if (table->parent) {
+            return symbol_table_lookup(table->parent, name, LOOKUP_CLASS);
+        }
+        return NULL;
+    }
+
     // Parent table lookup
     if (table->parent != NULL) {
-        return symbol_table_lookup(table->parent, name);
+        return symbol_table_lookup(table->parent, name, LOOKUP_GLOBAL);
     }
 
     // Sibling lookup (other children of parent)
-    if (table->parent && table->parent->children) {
+    if (depth == LOOKUP_GLOBAL && table->parent && table->parent->children) {
         for (int i = 0; i < vector_size(table->parent->children); ++i) {
             SymbolTable* siblingTable = (SymbolTable*)vector_get(table->parent->children, i);
             if (siblingTable != table) {
-                Symbol* siblingSymbol = symbol_table_lookup(siblingTable, name);
+                Symbol* siblingSymbol = symbol_table_lookup(siblingTable, name, LOOKUP_GLOBAL);
                 if (siblingSymbol) {
                     return siblingSymbol;
                 }
@@ -142,6 +158,25 @@ Symbol* symbol_table_lookup(SymbolTable* table, char* name) {
     return NULL;
 }
 
+const char* type_to_str(Type type) {
+    switch (type.basicType) {
+        case TYPE_INT:
+            return "int";
+        case TYPE_CHAR:
+            return "char";
+        case TYPE_BOOLEAN:
+            return "boolean";
+        case TYPE_STRING:
+            return "string";
+        case TYPE_NULL:
+            return "null";
+        case TYPE_USER_DEFINED:
+            return type.userDefinedType;
+        default:
+            log_error(ERROR_INVALID_INPUT, __FILE__, __LINE__, "How did we get here");
+            exit(EXIT_FAILURE);
+    }
+}
 
 vector get_symbols_of_kind(SymbolTable* table, Kind kind) {
     vector symbols = vector_create();

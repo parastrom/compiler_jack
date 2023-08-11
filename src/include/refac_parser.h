@@ -32,8 +32,6 @@ ASTNode* parse_subroutine_call(Parser* parser);
 ASTNode* parse_expression(Parser* parser);
 ASTNode* parse_term(Parser* parser);
 
-void* safer_malloc(size_t size);
-void safer_free(void* ptr);
 void destroy_ast(ASTNode* ast);
 void destroy_class(ClassNode* class);
 void destroy_class_var_dec(ClassVarDecNode* class_var_dec);

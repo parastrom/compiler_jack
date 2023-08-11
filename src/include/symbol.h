@@ -37,6 +37,7 @@ typedef enum {
     TYPE_BOOLEAN,
     TYPE_STRING,
     TYPE_NULL,
+    TYPE_VOID,
     TYPE_USER_DEFINED
 } BasicType;
 
@@ -44,6 +45,12 @@ typedef struct Type {
     BasicType basicType;
     char* userDefinedType;  // NULL unless basicType == TYPE_USER_DEFINED
 } Type;
+
+typedef enum {
+    LOOKUP_LOCAL,
+    LOOKUP_CLASS,
+    LOOKUP_GLOBAL
+} Depth;
 
 struct Symbol {
     char *name;
@@ -83,8 +90,9 @@ SymbolTable* create_table(Scope scope, SymbolTable *parent);
 void destroy_table(SymbolTable *table);
 Symbol* symbol_new(const char *name,  Type* type, Kind kind, SymbolTable* table);
 Symbol* symbol_table_add(SymbolTable *table, const char* name, const char* type, Kind kind);
-Symbol* symbol_table_lookup(SymbolTable* table, char* name);
+Symbol* symbol_table_lookup(SymbolTable* table, char* name, Depth depth);
 vector get_symbols_of_kind(SymbolTable* table, Kind kind);
+const char* type_to_str(Type type);
 void destroy_symbol(Symbol *symbol);
 SymbolTable* create_and_link_table(Scope scope, SymbolTable* parent);
 SymbolTable* getParent(SymbolTable *table);
