@@ -7,15 +7,13 @@
 #include "token.h"
 
 typedef struct Parser {
-    Lexer* lexer;
+    Stack* stack;
     Token* currentToken;
-    Token* nextToken;
-    ASTNode* ast;
     bool has_error;
     Arena* arena;
 } Parser;
 
-Parser* init_parser(Lexer* lexer);
+Parser* init_parser(Stack* lexer, Arena* arena);
 ASTNode* init_program();
 ASTNode* parse_class(Parser* parser);
 ASTNode* parse_class_var_dec(Parser* parser);

@@ -24,7 +24,7 @@ Kind string_to_kind(const char* kind_str) {
  * @return Symbol* 
  */
 Symbol* symbol_new(const char* name, Type* type, Kind kind, SymbolTable* table) {
-    Symbol* symbol = malloc(sizeof(Symbol));
+    Symbol* symbol = (Symbol*) arena_alloc(table->arena, sizeof(Symbol));
     symbol->name = arena_alloc(table->arena, strlen(name) + 1);
     strcpy(symbol->name, name);
     symbol->type = type;

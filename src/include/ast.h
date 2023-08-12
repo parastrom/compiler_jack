@@ -156,6 +156,8 @@ struct ASTNode {
         Operation* operation;
         VarTerm* varTerm;
     } data;
+    const char* filename;
+    int line;
 };
 
 typedef enum {

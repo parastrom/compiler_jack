@@ -24,6 +24,7 @@ CompilerState* init_compiler() {
     CompilerState* state = arena_alloc(arena, sizeof(CompilerState));
     memset(state->jack_files, 0, sizeof state->jack_files);
     memset(state->jack_vm_files, 0, sizeof state->jack_vm_files);
+    state->arena = arena;
     state->num_of_files = 0;
     state->vm_filename = NULL;
     state->vm_ptr = NULL;
@@ -123,12 +124,11 @@ int compile(CompilerState* state) {
     const char* stdlib_json = read_file_into_string(JACK_FILES_DIR);
     vector jack_os_classes = parse_jack_stdlib_from_json(stdlib_json, stdlib_arena);
 
-    vector stdlib_classes = jack_stdlib_setup();
-    add_stdlib_table(state->global_table, stdlib_classes);
+    add_stdlib_table(state->global_table, jack_os_classes);
 
     ASTNode* program_node = init_program();
     for (size_t i = 0; i < state->num_of_files; i++) {
-        Lexer* lexer = init_lexer(state->jack_files[i]);
+        Lexer* lexer = init_lexer(state->jack_files[i], state->arena);
         Parser* parser = init_parser(lexer);
         ASTNode * class_node = parse_class(parser);
         vector_push(program_node->data.program->classes, class_node);

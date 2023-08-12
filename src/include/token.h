@@ -67,9 +67,9 @@ typedef enum
     TOKEN_CATEGORY_ARITH = 1 << 8
 } TokenCategory;
 
-typedef struct
-{
+typedef struct {
     TokenType type;
+    const char* filename;
     char* lx;
     int line;
 } Token;
@@ -87,7 +87,7 @@ TokenType token_type_from_char(char ch);
 TokenCategory get_token_category(TokenType type);
 bool is_token_category(TokenType type, TokenCategory category);
 const char* category_to_string(TokenCategory category);
-Token *new_token(TokenType type, char *lx, int line, Arena* arena);
+Token *new_token(const char* filename, TokenType type, char *lx, int line, Arena* arena);
 void destroy_token(Token *token);
 
 void fmt(const Token *token);

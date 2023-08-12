@@ -283,9 +283,9 @@ TokenType determine_token_type(const char* token_str, int old_state) {
  * @param token_count - The number of tokens created so far
  */
 void create_token(Lexer* lexer, int old_state, size_t token_start, size_t token_len, int line) {
-    const char* token_str = strndup(lexer->input + token_start, token_len);
+    char* token_str = strndup(lexer->input + token_start, token_len);
     TokenType type = determine_token_type(token_str, old_state);
-    Token* token = new_token(type, token_str, line, lexer->arena);
+    Token* token = new_token(lexer->filename, type, token_str, line, lexer->arena);
     stack_push(lexer->stack, token);
 }
 
@@ -343,16 +343,16 @@ ErrorCode process_input(Lexer* lexer) {
        // Handle lexer error
         if (state == ERROR) {
             if (old_state == IN_STRING && c == '\n') {
-                log_error(ERROR_LEXER_NEWLINE_IN_STRING, __FILE__, line, "Lexer error: newline in string at line %d", line);
+                log_error(ERROR_LEXER_NEWLINE_IN_STRING, lexer->filename, line, "Lexer error: newline in string at line %d", line);
                 return ERROR_LEXER_NEWLINE_IN_STRING;
             } else if (old_state == IN_STRING && c == '\0') {
-                log_error(ERROR_LEXER_EOF_IN_STRING, __FILE__, line, "Lexer error: EOF in string at line %d", line);
+                log_error(ERROR_LEXER_EOF_IN_STRING, lexer->filename, line, "Lexer error: EOF in string at line %d", line);
                 return ERROR_LEXER_EOF_IN_STRING;
             } else if (c == '\0') {
-                log_error(ERROR_LEXER_UNEXPECTED_EOF, __FILE__, line, "Lexer error: unexpected EOF at line %d", line);
+                log_error(ERROR_LEXER_UNEXPECTED_EOF, lexer->filename, line, "Lexer error: unexpected EOF at line %d", line);
                 return ERROR_LEXER_UNEXPECTED_EOF;
             } else {
-                log_error(ERROR_LEXER_ILLEGAL_SYMBOL, __FILE__, line, "Lexer error: illegal symbol '%c' at line %d", c, line);
+                log_error(ERROR_LEXER_ILLEGAL_SYMBOL, lexer->filename, line, "Lexer error: illegal symbol '%c' at line %d", c, line);
                 return ERROR_LEXER_ILLEGAL_SYMBOL;
             }
         }

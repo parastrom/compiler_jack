@@ -1,5 +1,4 @@
 #include "ast.h"
-#include "symbol.h"
 #include <string.h>
 
 ASTNode* init_ast_node(ASTNodeType type, Arena* arena) {
@@ -110,7 +109,8 @@ ASTNode* init_ast_node(ASTNodeType type, Arena* arena) {
             node->data.varTerm->varName = NULL;
             break;
         default:
-            log_error(ERROR_UNKNOWN_NODE_TYPE, __FILE__, __LINE__, "Unknown node type: %d\n", type);
+            log_error(ERROR_UNKNOWN_NODE_TYPE, __FILE__, __LINE__,
+                      "Unknown node type: %d\n", type);
             exit(EXIT_FAILURE);
     }
 
@@ -229,7 +229,7 @@ void build_class_var_dec_node(ASTVisitor* visitor, ASTNode* node) {
     for (int i = 0; i < vector_size(node->data.classVarDec->varNames); i++) {
         char* varName = (char*) vector_get(node->data.classVarDec->varNames, i);
         if (symbol_table_lookup(visitor->currentTable, varName, LOOKUP_LOCAL)) {
-            log_error(ERROR_SEMANTIC_REDECLARED_SYMBOL, __FILE__, __LINE__,
+            log_error(ERROR_SEMANTIC_REDECLARED_SYMBOL, node->filename, node->line,
                       "Variable %s already declared.", varName);
             exit(EXIT_FAILURE);
         }
@@ -241,7 +241,7 @@ void build_class_var_dec_node(ASTVisitor* visitor, ASTNode* node) {
                 (void) symbol_table_add(visitor->currentTable, varName, node->data.classVarDec->varType, KIND_FIELD);
                 break;
             default:
-                log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__, "Invalid class var modifier");
+                log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line, "Invalid class var modifier");
                 exit(EXIT_FAILURE);
         }
     }
@@ -268,7 +268,7 @@ void build_subroutine_dec_node(ASTVisitor* visitor, ASTNode* node) {
                 node->data.subroutineDec->returnType, KIND_FUNCTION);
             break;
         default:
-            log_error(ERROR_SEMANTIC_INVALID_SUBROUTINE, __FILE__, __LINE__,
+            log_error(ERROR_SEMANTIC_INVALID_SUBROUTINE, node->filename, node->line,
                       "Invalid subroutine type");
             exit(EXIT_FAILURE);
     }
@@ -319,7 +319,7 @@ void analyze_class_node(ASTVisitor* visitor, ASTNode* node) {
     Symbol* classSymbol = symbol_table_lookup(visitor->currentTable, node->data.classDec->className
                                                 , LOOKUP_LOCAL);
     if (!classSymbol || classSymbol->kind != KIND_CLASS) {
-        log_error(ERROR_SEMANTIC_INVALID_KIND, __FILE__, __LINE__,
+        log_error(ERROR_SEMANTIC_INVALID_KIND, node->filename, node->line,
                   "Undefined class: %s", node->data.classDec->className);
         exit(EXIT_FAILURE);
     }
@@ -347,7 +347,7 @@ void analyze_class_var_dec_node(ASTVisitor* visitor, ASTNode* node) {
         char* varName = (char*) vector_get(node->data.classVarDec->varNames, i);
         Symbol* varSymbol = symbol_table_lookup(visitor->currentTable, varName, LOOKUP_GLOBAL);
         if(!type_is_valid(visitor, varSymbol->type)) {
-            log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
+            log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
                       "Invalid type %s.", varSymbol->type->userDefinedType);
             exit(EXIT_FAILURE);
         }
@@ -359,7 +359,7 @@ void analyze_subroutine_dec_node(ASTVisitor* visitor, ASTNode* node) {
                                             node->data.subroutineDec->subroutineName, LOOKUP_LOCAL);
     if(!subSymbol || (subSymbol->kind != KIND_METHOD && subSymbol->kind != KIND_CONSTRUCTOR
             && subSymbol->kind != KIND_FUNCTION)) {
-        log_error(ERROR_SEMANTIC_INVALID_KIND, __FILE__, __LINE__,
+        log_error(ERROR_SEMANTIC_INVALID_KIND, node->filename, node->line,
                   "Undefined subroutine: %s", node->data.subroutineDec->subroutineName);
         exit(EXIT_FAILURE);
     }
@@ -375,7 +375,7 @@ void analyze_parameter_list_node(ASTVisitor* visitor, ASTNode* node) {
         char* paramName = (char*) vector_get(node->data.parameterList->parameterNames, i);
         Symbol* paramSymbol = symbol_table_lookup(visitor->currentTable, paramName, LOOKUP_GLOBAL);
         if(!type_is_valid(visitor, paramSymbol->type)) {
-            log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
+            log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
                       "Invalid type %s.", paramSymbol->type->userDefinedType);
             exit(EXIT_FAILURE);
         }
@@ -388,7 +388,7 @@ void analyze_subroutine_body_node(ASTVisitor* visitor, ASTNode* node) {
         char* varName = (char*) vector_get(varDecNode->data.varDec->varNames, i);
         Symbol* varSymbol = symbol_table_lookup(visitor->currentTable, varName, LOOKUP_GLOBAL);
         if (!type_is_valid(visitor, varSymbol->type)) {
-            log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
+            log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
                       "Invalid type %s for variable %s.", varSymbol->type->userDefinedType, varName);
             exit(EXIT_FAILURE);
         }
@@ -416,7 +416,7 @@ void analyze_let_statement_node(ASTVisitor* visitor, ASTNode* node) {
     Symbol* varSymbol = symbol_table_lookup(visitor->currentTable, varName, LOOKUP_CLASS);
 
     if(!varSymbol) {
-        log_error(ERROR_SEMANTIC_UNDECLARED_SYMBOL, __FILE__, __LINE__,
+        log_error(ERROR_SEMANTIC_UNDECLARED_SYMBOL, node->filename, node->line,
                   "Undeclared variable : %s", varName);
     }
 
@@ -424,7 +424,7 @@ void analyze_let_statement_node(ASTVisitor* visitor, ASTNode* node) {
         ast_node_accept(visitor, letStmtNode->indexExpression);
         Type indexExprType = letStmtNode->indexExpression->data.expression->type;
         if(indexExprType.userDefinedType != TYPE_INT) {
-            log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
+            log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
                       "Array index must be an integer.");
             exit(EXIT_FAILURE);
         }
@@ -435,7 +435,7 @@ void analyze_let_statement_node(ASTVisitor* visitor, ASTNode* node) {
     ast_node_accept(visitor, letStmtNode->rightExpression);
     Type rightExprType =  letStmtNode->rightExpression->data.expression->type;
     if(types_are_equal(rightExprType, *varSymbol->type)) {
-        log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
+        log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
                   "Type mismatch in assignment.");
         exit(EXIT_FAILURE);
     }
@@ -447,7 +447,7 @@ void analyze_if_statement_node(ASTVisitor* visitor, ASTNode* node) {
     ast_node_accept(visitor, ifStmtNode->condition);
     Type conditionType = ifStmtNode->condition->data.expression->type;
     if (conditionType.basicType != TYPE_BOOLEAN) {
-        log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
+        log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
                   "If statement condition must evaluate to a boolean.");
         exit(EXIT_FAILURE);
     }
@@ -468,7 +468,7 @@ void analyze_while_statement_node(ASTVisitor* visitor, ASTNode* node) {
 
     // Ensure the condition evaluates to a boolean
     if (conditionType.basicType != TYPE_BOOLEAN) {
-        log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
+        log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
                   "While statement condition must evaluate to a boolean.");
         exit(EXIT_FAILURE);
     }
@@ -497,7 +497,7 @@ void analyze_return_statement_node(ASTVisitor* visitor, ASTNode* node) {
     }
 
     if(!subSymbol) {
-        log_error(ERROR_NULL_POINTER, __FILE__, __LINE__, "Could not find subroutine in class");
+        log_error(ERROR_NULL_POINTER, node->filename, node->line, "Could not find subroutine in class");
         exit(EXIT_FAILURE);
     }
 
@@ -505,7 +505,7 @@ void analyze_return_statement_node(ASTVisitor* visitor, ASTNode* node) {
     ReturnStatementNode* returnStmt = node->data.returnStatement;
     if (returnStmt->expression) {
         if(!types_are_equal(*subroutineType, returnStmt->expression->data.expression->type)) {
-            log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
+            log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
                       "Return expression type: (%s) , mismatch with subroutine return type (%s)",
                       type_to_str(returnStmt->expression->data.expression->type), type_to_str(*subroutineType));
         }
@@ -513,7 +513,7 @@ void analyze_return_statement_node(ASTVisitor* visitor, ASTNode* node) {
     } else {
         // When return format is just 'return;', subroutine type should be void
         if (subroutineType->basicType != TYPE_VOID) {
-            log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
+            log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
                       "Subroutine is expected to return type (%s), but no return value provided.",
                       type_to_str(*subroutineType));
             exit(EXIT_FAILURE);
@@ -546,7 +546,7 @@ void analyze_term_node(ASTVisitor* visitor, ASTNode* node) {
                 termNode->type.basicType = TYPE_USER_DEFINED;
                 termNode->type.userDefinedType = visitor->currentClassName; // Assuming you have this field in ASTVisitor
             } else {
-                log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__, "Invalid keyword constant");
+                log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line, "Invalid keyword constant");
                 exit(EXIT_FAILURE);
             }
             break;
@@ -558,7 +558,7 @@ void analyze_term_node(ASTVisitor* visitor, ASTNode* node) {
             analyze_unary_op(visitor,node);
             break;
         default:
-            log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__, "Invalid term type");
+            log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line, "Invalid term type");
             exit(EXIT_FAILURE);
     }
 }
@@ -614,7 +614,8 @@ void analyze_expression_node(ASTVisitor* visitor, ASTNode* node) {
             case '*':
             case '/': // arithmetic
                 if (!type_arithmetic_compat(curType, nextType)) {
-                    log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__, "Invalid type for arithmetic operation");
+                    log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
+                              "Invalid type for arithmetic operation");
                     exit(EXIT_FAILURE);
                 }
                 curType.basicType = TYPE_INT;
@@ -624,7 +625,7 @@ void analyze_expression_node(ASTVisitor* visitor, ASTNode* node) {
             case '<':
             case '=':
                 if (!type_comparison_compat(curType, nextType)) {
-                    log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
+                    log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
                                 "Invalid type for comparison operation");
                     exit(EXIT_FAILURE);
                 }
@@ -634,7 +635,7 @@ void analyze_expression_node(ASTVisitor* visitor, ASTNode* node) {
             case '&':
             case '|':
                 if (!type_is_boolean(curType) || !type_is_boolean(nextType)) {
-                    log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
+                    log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
                                 "Invalid type for boolean operation");
                     exit(EXIT_FAILURE);
                 }
@@ -642,7 +643,7 @@ void analyze_expression_node(ASTVisitor* visitor, ASTNode* node) {
                 curType.userDefinedType = NULL;
                 break;
             default:
-                log_error(ERROR_SEMANTIC_INVALID_OPERATION, __FILE__, __LINE__,
+                log_error(ERROR_SEMANTIC_INVALID_OPERATION, node->filename, node->line,
                             "Invalid operation");
                 break;
         }
@@ -659,7 +660,7 @@ void analyze_subroutine_call_node(ASTVisitor* visitor, ASTNode* node){
     Symbol* subSymbol = symbol_table_lookup(visitor->currentTable, subCall->subroutineName , LOOKUP_GLOBAL);
     if (!subSymbol || !(subSymbol->kind == KIND_FUNCTION ||
         subSymbol->kind == KIND_CONSTRUCTOR || subSymbol->kind == KIND_METHOD)) {
-        log_error(ERROR_SEMANTIC_INVALID_EXPRESSION, __FILE__, __LINE__,
+        log_error(ERROR_SEMANTIC_INVALID_EXPRESSION, node->filename, node->line,
                   "Undefined subroutine: %s", subCall->subroutineName);
         exit(EXIT_FAILURE);
     }
@@ -670,7 +671,7 @@ void analyze_subroutine_call_node(ASTVisitor* visitor, ASTNode* node){
             Symbol* callerSymbol = symbol_table_lookup(visitor->currentTable, subCall->caller, LOOKUP_CLASS);
             if (!callerSymbol ||
                 strcmp(callerSymbol->type->userDefinedType, subSymbol->type->userDefinedType) != 0) {
-                    log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
+                    log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
                               "Caller type mismatch for method: %s", subCall->subroutineName);
                     exit(EXIT_FAILURE);
             }
@@ -688,7 +689,7 @@ void analyze_subroutine_call_node(ASTVisitor* visitor, ASTNode* node){
         Symbol* expectedArgSymbol = vector_get(args, i);
         if (expectedArgSymbol->type->basicType != argType.basicType ||
             strcmp(expectedArgSymbol->type->userDefinedType, argType.userDefinedType) != 0) {
-                log_error(ERROR_SEMANTIC_INVALID_ARGUMENT, __FILE__, __LINE__,
+                log_error(ERROR_SEMANTIC_INVALID_ARGUMENT, node->filename, node->line,
                           "Mismatched argument type for subroutine: %s", subCall->subroutineName);
                 exit(EXIT_FAILURE);
         }
@@ -700,7 +701,7 @@ void analyze_var_term_node(ASTVisitor* visitor, ASTNode* node) {
 
     Symbol* termSymbol = symbol_table_lookup(visitor->currentTable, term->varName, LOOKUP_CLASS);
     if (!termSymbol) {
-        log_error(ERROR_SEMANTIC_UNDECLARED_SYMBOL, __FILE__, __LINE__,
+        log_error(ERROR_SEMANTIC_UNDECLARED_SYMBOL, node->filename, node->line,
                   "Undefined variable: %s", term->varName);
         exit(EXIT_FAILURE);
     }
@@ -709,7 +710,7 @@ void analyze_var_term_node(ASTVisitor* visitor, ASTNode* node) {
         Symbol* classSymbol = symbol_table_lookup(visitor->currentTable, term->className, LOOKUP_GLOBAL);
         Symbol* attributeOrMethod = symbol_table_lookup(classSymbol->childTable, term->varName, LOOKUP_LOCAL);
         if (!attributeOrMethod) {
-            log_error(ERROR_SEMANTIC_INVALID_TERM, __FILE__, __LINE__,
+            log_error(ERROR_SEMANTIC_INVALID_TERM, node->filename, node->line,
                       "Variable %s not a valid attribute or method of class %s", term->varName, term->className);
             exit(EXIT_FAILURE);
         }
@@ -726,18 +727,18 @@ void analyze_unary_op_node(ASTVisitor* visitor, ASTNode* node) {
 
     if (op == '~') {
         if (!type_is_boolean(type)) {
-            log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
+            log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
                         "Invalid type for unary operation");
             exit(EXIT_FAILURE);
         }
     } else if (op == '-') {
         if (type.basicType != TYPE_INT) {
-            log_error(ERROR_SEMANTIC_INVALID_TYPE, __FILE__, __LINE__,
+            log_error(ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
                         "Invalid type for unary operation");
             exit(EXIT_FAILURE);
         }
     } else {
-        log_error(ERROR_SEMANTIC_INVALID_OPERATION, __FILE__, __LINE__,
+        log_error(ERROR_SEMANTIC_INVALID_OPERATION, node->filename, node->line,
                     "Invalid unary operation");
         exit(EXIT_FAILURE);
     }

@@ -236,7 +236,7 @@ char* token_to_string(const Token *token)
  * @param line The line number where the token was found.
  * @return A pointer to the newly created token.
  */
-Token *new_token(TokenType type, char *lx, int line, Arena* arena)
+Token *new_token(const char* filename, TokenType type, char *lx, int line, Arena* arena)
 {
     Token *token = arena_alloc(arena, sizeof(Token));
     if (token == NULL)
@@ -244,6 +244,7 @@ Token *new_token(TokenType type, char *lx, int line, Arena* arena)
         log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Failed to allocate memory for token");
         return NULL;
     }
+    token->filename = filename;
     token->type = type;
     token->lx = lx; // Take ownership of the lx string
     token->line = line;
