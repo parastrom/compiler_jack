@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <assert.h>
+#include "logger.h"
 
 
 /**
@@ -31,17 +32,16 @@ static void extend_if_necessary(vector v);
  * The returned vector will have been dynamically allocated, and must be
  * destroyed after use using `vector_destroy`.
  */
-vector vector_create(Arena* arena) {
-
+vector vector_create() {
   // Allocate space for the vector itself, as well as its internal element 
   // storage (capacity 1 to start).
-  vector v = arena_alloc(arena,sizeof (vector));
+  vector v = malloc(sizeof (vector));
   assert(v != NULL);
-  v->elems = malloc(sizeof (void *));
+  v->elems = malloc(4 * sizeof (void *));
   assert(v->elems != NULL);
 
-  // Vector metadata. Capacity starts at one, since we have allocated space for 
-  // one element already.
+  // Vector metadata. Capacity starts at four , since we have allocated space for
+  // four  element already.
   v->capacity = 4;
   v->size = 0;
 
@@ -166,17 +166,25 @@ static void **get_element(const vector v, int i) {
   return &v->elems[i];
 }
 
+
 /**
  * Internal helper; doubles the vector's internal storage capacity when 
  * necessary (*i.e.*, the vector's `size` becomes greater than its `capacity`).
  */
 static void extend_if_necessary(vector v) {
-  if (v->size > v->capacity) {
-
+  if (v->size >= v->capacity) {
     // Doubling the capacity when necessary allows for an amortized constant 
     // runtime for extensions. Using `realloc` will conveniently copy the 
     // vector's existing contents to any newly allocated memory.
     v->capacity *= 2;
-    v->elems = realloc(v->elems, v->capacity * sizeof (void *));
+    //v->elems = realloc(v->elems, v->capacity * 8);
+    void **new_elems = realloc(v->elems, v->capacity * sizeof(void *));
+    if (new_elems == NULL) {
+        // Handle reallocation failure
+        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Failed to reallocate memory for vector");
+        exit(EXIT_FAILURE);
+    }
+    v->elems = new_elems;
+
   }
 }

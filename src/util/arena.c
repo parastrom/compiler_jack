@@ -24,7 +24,19 @@
     ((void*)(((uintptr_t)(pointer) + (alignment)-1) & ~((alignment)-1)))
 
 
-Arena* init_arena(size_t size) {
+static size_t get_page_size() {
+    #ifdef _WIN32
+        SYSTEM_INFO si;
+        GetSystemInfo(&si);
+        return si.dwPageSize;
+    #else
+        return sysconf(_SC_PAGESIZE);
+    #endif
+}
+
+Arena* init_arena(size_t multiplier) {
+    size_t size = multiplier * PAGE_SIZE;
+
     Arena* arena = malloc(sizeof(Arena));
     if (!arena) {
         return NULL;
@@ -46,15 +58,7 @@ Arena* init_arena(size_t size) {
     return arena;
 }
 
-static size_t get_page_size() {
-    #ifdef _WIN32
-        SYSTEM_INFO si;
-        GetSystemInfo(&si);
-        return si.dwPageSize;
-    #else
-        return sysconf(_SC_PAGESIZE);
-    #endif
-}
+
 
 static bool commit_memory(void* addr, size_t size) {
     // Size, rounded to page boundaries.
@@ -80,12 +84,14 @@ void* arena_alloc(Arena* arena, size_t size) {
     // Check if we need to commit more memory
     if (arena->current + size > arena->committed_end) {
         size_t needed_size = ((char*)arena->current + size) - (char*)arena->committed_end;
+        size_t commit_size = (needed_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
         if (!commit_memory(arena->committed_end, needed_size)) {
             log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Failed to commit memory!");
             return NULL;
         }
-        arena->committed_end = (char*)arena->committed_end + needed_size;
+        arena->committed_end = (char*)arena->committed_end + commit_size;
     }
+
 
     void* result = arena->current;
     arena->current = (char*)arena->current + size;

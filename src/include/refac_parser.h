@@ -7,13 +7,13 @@
 #include "token.h"
 
 typedef struct Parser {
-    Stack* stack;
+    TokenQueue* queue;
     Token* currentToken;
     bool has_error;
     Arena* arena;
 } Parser;
 
-Parser* init_parser(Stack* lexer, Arena* arena);
+Parser* init_parser(TokenQueue* lexer, Arena* arena);
 ASTNode* init_program();
 ASTNode* parse_class(Parser* parser);
 ASTNode* parse_class_var_dec(Parser* parser);
@@ -31,6 +31,7 @@ ASTNode* parse_return_statement(Parser* parser);
 ASTNode* parse_subroutine_call(Parser* parser);
 ASTNode* parse_expression(Parser* parser);
 ASTNode* parse_term(Parser* parser);
+ASTNode* parse_var_term(Parser* parser);
 
 void destroy_parser(Parser* parser);
 

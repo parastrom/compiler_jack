@@ -2,8 +2,8 @@
 #define REFAC_LEXER_H
 
 #include <stdio.h>
-#include "stack.h"
 #include "logger.h"
+#include "token_queue.h"
 
 #define NUM_STATES 11
 #define NUM_EQ_CLASSES 10
@@ -13,7 +13,7 @@ typedef struct
     size_t position;
     const char *filename;
     int cur_len;
-    Stack* stack;
+    TokenQueue* queue;
     ErrorCode error_code;
     Arena* arena;
 } Lexer;

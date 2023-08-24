@@ -1,6 +1,7 @@
+#include "symbol.h"
 #include <stdlib.h>
 #include <string.h>
-#include "symbol.h"
+#include "cJSON.h"
 
 Kind string_to_kind(const char* kind_str) {
     if (strcmp(kind_str, "KIND_FUNCTION") == 0) {
@@ -58,8 +59,8 @@ SymbolTable* create_table(Scope scope, SymbolTable* parent, Arena* arena) {
     for (int i = 0; i < KIND_NONE; i++) {
         table->counts[i] = 0;
     }
-    table->symbols = vector_create(arena);
-    table->children = vector_create(arena);
+    table->symbols = vector_create();
+    table->children = vector_create();
 
 
     return table;
@@ -75,28 +76,28 @@ SymbolTable* create_table(Scope scope, SymbolTable* parent, Arena* arena) {
  * @param kind 
  */
 Symbol* symbol_table_add(SymbolTable* table, const char* name, const char* type, Kind kind) {
-    Type symbolType;
+    Type* symbolType  = (Type*) arena_alloc(table->arena, sizeof(Type));
     if(strcmp(type, "int") == 0) {
-        symbolType.basicType = TYPE_INT;
-        symbolType.userDefinedType = NULL;
+        symbolType->basicType = TYPE_INT;
+        symbolType->userDefinedType = NULL;
     } else if (strcmp(type, "char") == 0) {
-        symbolType.basicType = TYPE_CHAR;
-        symbolType.userDefinedType = NULL;
+        symbolType->basicType = TYPE_CHAR;
+        symbolType->userDefinedType = NULL;
     } else if (strcmp(type, "boolean") == 0) {
-        symbolType.basicType = TYPE_BOOLEAN;
-        symbolType.userDefinedType = NULL;
+        symbolType->basicType = TYPE_BOOLEAN;
+        symbolType->userDefinedType = NULL;
     } else if (strcmp(type, "String") == 0) {
-        symbolType.basicType = TYPE_STRING;
-        symbolType.userDefinedType = NULL;
+        symbolType->basicType = TYPE_STRING;
+        symbolType->userDefinedType = NULL;
     } else if (strcmp(type, "void") == 0 ){
-        symbolType.basicType = TYPE_VOID;
-        symbolType.userDefinedType = NULL;
+        symbolType->basicType = TYPE_VOID;
+        symbolType->userDefinedType = NULL;
     } else {
-        symbolType.basicType = TYPE_USER_DEFINED;
-        symbolType.userDefinedType = strdup(type);
+        symbolType->basicType = TYPE_USER_DEFINED;
+        symbolType->userDefinedType = strdup(type);
     }
 
-    Symbol* symbol = symbol_new(name, &symbolType, kind, table);
+    Symbol* symbol = symbol_new(name, symbolType, kind, table);
     symbol->index = table->counts[kind];
     table->counts[kind]++;
     vector_push(table->symbols, symbol);
@@ -157,11 +158,21 @@ Symbol* symbol_table_lookup(SymbolTable* table, char* name, Depth depth) {
         }
     }
 
+    if (depth == LOOKUP_GLOBAL && !table->parent) { // Global table
+        for (int i = 0; i < vector_size(table->children); ++i) {
+            SymbolTable* childTable = (SymbolTable*)vector_get(table->children, i);
+            Symbol* childSymbol = symbol_table_lookup(childTable, name, LOOKUP_LOCAL);
+            if (childSymbol) {
+                return childSymbol;
+            }
+        }
+    }
+
     return NULL;
 }
 
-const char* type_to_str(Type type) {
-    switch (type.basicType) {
+const char* type_to_str(Type* type) {
+    switch (type->basicType) {
         case TYPE_INT:
             return "int";
         case TYPE_CHAR:
@@ -173,7 +184,7 @@ const char* type_to_str(Type type) {
         case TYPE_NULL:
             return "null";
         case TYPE_USER_DEFINED:
-            return type.userDefinedType;
+            return type->userDefinedType;
         default:
             log_error(ERROR_INVALID_INPUT, __FILE__, __LINE__, "How did we get here");
             exit(EXIT_FAILURE);
@@ -181,7 +192,7 @@ const char* type_to_str(Type type) {
 }
 
 vector get_symbols_of_kind(SymbolTable* table, Kind kind) {
-    vector symbols = vector_create(table->arena);
+    vector symbols = vector_create();
     for(int i = 0 ; i < vector_size(table->symbols); i++) {
         Symbol* symbol = vector_get(table->symbols, i);
         if (symbol->kind == kind) {
@@ -205,7 +216,7 @@ FunctionInfo* parse_function_from_json(cJSON* function_json, Arena* arena) {
     function_info->name = strdup(cJSON_GetObjectItem(function_json, "name")->valuestring);
     function_info->return_type = strdup(cJSON_GetObjectItem(function_json, "return_type")->valuestring);
     function_info->kind = string_to_kind(cJSON_GetObjectItem(function_json, "kind")->valuestring);
-    function_info->parameters = vector_create(arena);
+    function_info->parameters = vector_create();
 
     cJSON *params = cJSON_GetObjectItem(function_json, "parameters");
     cJSON *param_item = NULL;
@@ -227,16 +238,21 @@ vector parse_jack_stdlib_from_json(const char* json_content, Arena* arena) {
         exit(EXIT_FAILURE);
     }
 
-    vector std_classes = vector_create(arena);
+    vector std_classes = vector_create();
 
     // Iterate over each class in the JSON
     cJSON *class_item = NULL;
     cJSON_ArrayForEach(class_item, root) {
         ClassInfo *class_info = safer_malloc(sizeof(ClassInfo));
 
-        // The class name is the key for this item
-        class_info->name = strdup(class_item->string);
-        class_info->functions = vector_create(arena);
+        // Extract the class name
+        cJSON *class_name = cJSON_GetObjectItem(class_item, "name");
+        if (class_name == NULL || class_name->type != cJSON_String) {
+            log_error(ERROR_JSON_STRUCTURE, __FILE__, __LINE__, "Expected 'name' field in class object");
+            exit(EXIT_FAILURE);
+        }
+        class_info->name = strdup(class_name->valuestring);
+        class_info->functions = vector_create();
 
         cJSON *functions_array = cJSON_GetObjectItem(class_item, "functions");
         cJSON *function_item = NULL;
@@ -278,22 +294,24 @@ SymbolTable* create_table_for_func(Kind kind, SymbolTable* parent_table) {
 
 void add_stdlib_table(SymbolTable* global_table, vector jack_os_classes) {
     for (int i = 0; i < vector_size(jack_os_classes); i++) {
-        ClassInfo* class_info = vector_get(jack_os_classes, i);
+        ClassInfo* classInfo = vector_get(jack_os_classes, i);
 
-        // Add class to global table and create a new table for the class
-        Symbol* class_symbol = symbol_table_add(global_table, class_info->name, class_info->name, KIND_CLASS);
-        SymbolTable* class_table = class_symbol->childTable;
 
-        for (int j = 0; j < vector_size(class_info->functions); j++) {
-            FunctionInfo* func_info = vector_get(class_info->functions, j);
+        Symbol* classSymbol = symbol_table_add(global_table, classInfo->name, classInfo->name, KIND_CLASS);
+        SymbolTable* childTable = add_child_table(global_table, SCOPE_CLASS);
+        classSymbol->childTable = childTable;
 
-            // Add function/method/constructor to class's table and create a new table for it
-            (void) symbol_table_add(class_table, func_info->name, func_info->return_type, func_info->kind);
-            SymbolTable* func_table = create_table_for_func(func_info->kind, class_table);  // Helper function to determine scope and create table
+        for (int j = 0; j < vector_size(classInfo->functions); j++) {
+            FunctionInfo* funcInfo = vector_get(classInfo->functions, j);
 
-            for (int k = 0; k < vector_size(func_info->parameters); k++) {
-                ParameterInfo* param_info = vector_get(func_info->parameters, k);
-                (void) symbol_table_add(func_table, param_info->name, param_info->type, KIND_ARG);
+
+            Symbol* funcSymbol =  symbol_table_add(childTable, funcInfo->name, funcInfo->return_type, funcInfo->kind);
+            SymbolTable* funcTable = create_table_for_func(funcInfo->kind, childTable);
+            funcSymbol->childTable = funcTable;
+
+            for (int k = 0; k < vector_size(funcInfo->parameters); k++) {
+                ParameterInfo* param_info = vector_get(funcInfo->parameters, k);
+                symbol_table_add(funcTable, param_info->name, param_info->type, KIND_ARG);
             }
         }
     }

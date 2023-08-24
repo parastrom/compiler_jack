@@ -2,7 +2,8 @@
 #define SYMBOL_H
 #include "vector.h"
 #include "safer.h"
-#include "cJSON.h"
+
+#include "arena.h"
 
 typedef struct Symbol Symbol;
 typedef struct SymbolTable SymbolTable;
@@ -93,7 +94,7 @@ Symbol* symbol_new(const char *name,  Type* type, Kind kind, SymbolTable* table)
 Symbol* symbol_table_add(SymbolTable *table, const char* name, const char* type, Kind kind);
 Symbol* symbol_table_lookup(SymbolTable* table, char* name, Depth depth);
 vector get_symbols_of_kind(SymbolTable* table, Kind kind);
-const char* type_to_str(Type type);
+const char* type_to_str(Type* type);
 void destroy_symbol(Symbol *symbol);
 SymbolTable* create_and_link_table(Scope scope, SymbolTable* parent);
 SymbolTable* getParent(SymbolTable *table);

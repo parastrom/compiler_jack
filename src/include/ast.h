@@ -195,6 +195,7 @@ struct SemanticAnalyzer {
     void (*analyze_parameter_list_node)(ASTVisitor*, ASTNode*);
     void (*analyze_subroutine_body_node)(ASTVisitor*, ASTNode*);
     void (*analyze_statements)(ASTVisitor*, ASTNode*);
+    void (*analyze_statement_node)(ASTVisitor*, ASTNode*);
     void (*analyze_let_statement_node)(ASTVisitor*, ASTNode*);
     void (*analyze_if_statement_node)(ASTVisitor*, ASTNode*);
     void (*analyze_while_statement_node)(ASTVisitor*, ASTNode*);
@@ -320,12 +321,13 @@ struct SubroutineCallNode
     char *caller; // This could be a varName or className. NULL if not present.
     char *subroutineName;
     vector arguments; // vector of ExpressionNode pointers - args
+    Type* type;
 };
 struct ExpressionNode
 {
     ASTNode* term;
     vector operations; // vector of Operation pointers - ops
-    Type type;
+    Type* type;
 };
 struct Operation
 {
@@ -337,6 +339,7 @@ struct VarTerm
 {
     char *className; // NULL if not present
     char *varName;
+    Type* type;
 };
 struct TermNode
 {
@@ -357,11 +360,12 @@ struct TermNode
         int intValue;
         char *stringValue;
         char *keywordValue;
-        VarTerm varTerm;
+        ASTNode* varTerm;
         struct
         {
             char *arrayName;
             ASTNode* index;
+            Type* type;
         } arrayAccess;
         ASTNode* subroutineCall;
         ASTNode* expression;
@@ -371,60 +375,51 @@ struct TermNode
             ASTNode* term;
         } unaryOp;
     } data;
-    Type type;
+    Type* type;
 };
 
 ASTNode* init_ast_node(ASTNodeType type, Arena* arena);
-
+ASTVisitor* init_ast_visitor(Arena* arena, Phase initialPhase, SymbolTable* globalTable);
 void visit_ast_node(ASTVisitor* visitor, ASTNode* node);
 void ast_node_accept(ASTVisitor *visitor, ASTNode *node);
-void visit_class_node(ASTVisitor* visitor, ASTNode* node);
-void visit_class_var_dec_node(ASTVisitor* visitor, ASTNode* node);
-void visit_subroutine_dec_node(ASTVisitor* visitor, ASTNode* node);
-void visit_parameter_list_node(ASTVisitor* visitor, ASTNode* node);
-void visit_subroutine_body_node(ASTVisitor* visitor, ASTNode* node);
-void visit_var_dec_node(ASTVisitor* visitor, ASTNode* node);
-void visit_statements_node(ASTVisitor* visitor, ASTNode* node);
-void visit_statement_node(ASTVisitor* visitor, ASTNode* node);
-void visit_let_statement_node(ASTVisitor* visitor, ASTNode* node);
-void visit_if_statement_node(ASTVisitor* visitor, ASTNode* node);
-void visit_while_statement_node(ASTVisitor* visitor, ASTNode* node);
-void visit_do_statement_node(ASTVisitor* visitor, ASTNode* node);
-void visit_return_statement_node(ASTVisitor* visitor, ASTNode* node);
-void visit_subroutine_call_node(ASTVisitor* visitor, ASTNode* node);
-void visit_expression_node(ASTVisitor* visitor, ASTNode* node);
-void visit_operation(ASTVisitor* visitor, ASTNode* node);
-void visit_term_node(ASTVisitor* visitor, ASTNode* node);
 
+void execute_build_function(ASTVisitor* visitor, ASTNode* node);
+void execute_analyze_function(ASTVisitor* visitor, ASTNode* node);
 void push_table(ASTVisitor* visitor, SymbolTable* table);
 void pop_table(ASTVisitor* visitor);
 
+void build_program_node(ASTVisitor* visitor, ASTNode* node);
 void build_class_node(ASTVisitor* visitor, ASTNode* node);
 void build_class_var_dec_node(ASTVisitor* visitor, ASTNode* node);
 void build_subroutine_dec_node(ASTVisitor* visitor, ASTNode* node);
 void build_parameter_list_node(ASTVisitor* visitor, ASTNode* node);
 void build_subroutine_body_node(ASTVisitor* visitor, ASTNode* node);
 void build_var_dec_node(ASTVisitor* visitor, ASTNode* node);
-bool type_arithmetic_compat(Type type1, Type type2);
-bool type_comparison_compat(Type type1, Type type2);
-bool type_is_boolean(Type type);
+bool type_arithmetic_compat(Type* type1, Type* type2);
+bool type_comparison_compat(Type* type1, Type* type2);
+bool type_is_boolean(Type* type);
 bool type_is_valid(ASTVisitor* visitor, Type* type);
-bool types_are_equal(Type type1, Type);
+bool types_are_equal(Type* type1, Type* type2);
+void analyze_program_node(ASTVisitor* visitor, ASTNode* node);
 void analyze_class_node(ASTVisitor* visitor, ASTNode* node);
 void analyze_class_var_dec_node(ASTVisitor* visitor, ASTNode* node);
 void analyze_subroutine_dec_node(ASTVisitor* visitor, ASTNode* node);
 void analyze_parameter_list_node(ASTVisitor* visitor, ASTNode* node);
 void analyze_subroutine_body_node(ASTVisitor* visitor, ASTNode* node);
 void analyze_var_dec_node(ASTVisitor* visitor, ASTNode* node);
-void analyze_statements(ASTVisitor* visitor, ASTNode* node);
-void analyze_let_statement(ASTVisitor* visitor, ASTNode* node) ;
-void analyze_if_statement(ASTVisitor* visitor, ASTNode* node);
-void analyze_while_statement(ASTVisitor* visitor, ASTNode* node);
-void analyze_do_statement(ASTVisitor* visitor, ASTNode* node);
-void analyze_term(ASTVisitor* visitor, ASTNode* node);
-void analyze_expression(ASTVisitor* visitor, ASTNode* node);
-void analyze_subroutine_call(ASTVisitor* visitor, ASTNode* node);
-void analyze_var_term(ASTVisitor* visitor, ASTNode* node);
-void analyze_unary_op(ASTVisitor* visitor, ASTNode* node);
+void analyze_statements_node(ASTVisitor* visitor, ASTNode* node);
+void analyze_statement_node(ASTVisitor* visitor, ASTNode* node);
+void analyze_let_statement_node(ASTVisitor* visitor, ASTNode* node) ;
+void analyze_if_statement_node(ASTVisitor* visitor, ASTNode* node);
+void analyze_while_statement_node(ASTVisitor* visitor, ASTNode* node);
+void analyze_do_statement_node(ASTVisitor* visitor, ASTNode* node);
+void analyze_return_statement_node(ASTVisitor* visitor, ASTNode* node);
+void analyze_term_node(ASTVisitor* visitor, ASTNode* node);
+void analyze_expression_node(ASTVisitor* visitor, ASTNode* node);
+void analyze_subroutine_call_node(ASTVisitor* visitor, ASTNode* node);
+void analyze_var_term_node(ASTVisitor* visitor, ASTNode* node);
+void analyze_unary_op_node(ASTVisitor* visitor, ASTNode* node);
+void analyze_array_access_node(ASTVisitor* visitor, ASTNode* node);
+
 
 #endif //AST_H

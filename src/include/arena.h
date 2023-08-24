@@ -6,9 +6,8 @@
 
 typedef struct Arena Arena;
 
-Arena* init_arena(size_t size);
+Arena* init_arena(size_t mutliplier);
 void* arena_alloc(Arena* arena, size_t size);
-static size_t get_page_size();
 void reset_arena(Arena* arena);
 void destroy_arena(Arena* arena);
 

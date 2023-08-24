@@ -3,127 +3,125 @@
 #include <string.h>
 #include "safer.h"
 
-#define STACK_CAPACITY 4096
-
 /**
  * The transition table for the DFA.
  */
 static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
-    [START] = {
-        [C_white] = START,
-        [C_newline] = START,
-        [C_alpha] = IN_ID,
-        [C_digit] = IN_NUM,
-        [C_double_quote] = IN_STRING,
-        [C_slash] = COMMENT_START,
-        [C_star] = IN_SYMBOL,
-        [C_symbol] = IN_SYMBOL,
-        [C_other] = ERROR,
-        [C_eof] = START,
-    },
-    [IN_ID] = {
-        [C_white] = START,
-        [C_newline] = START,
-        [C_alpha] = IN_ID,
-        [C_digit] = IN_ID,
-        [C_double_quote] = IN_STRING,
-        [C_slash] = COMMENT_START,
-        [C_star] = IN_SYMBOL,
-        [C_symbol] = START,
-        [C_other] = ERROR,
-        [C_eof] = ERROR,
-    },
-    [IN_NUM] = {
-        [C_white] = START,
-        [C_alpha] = START,
-        [C_digit] = IN_NUM,
-        [C_double_quote] = IN_STRING,
-        [C_slash] = COMMENT_START,
-        [C_star] = IN_SYMBOL,
-        [C_symbol] = IN_SYMBOL,
-        [C_other] = ERROR,
-        [C_eof] = ERROR,
-    },
-    [IN_STRING] = {
-        [C_white] = IN_STRING,
-        [C_newline] = ERROR,
-        [C_alpha] = IN_STRING,
-        [C_digit] = IN_STRING,
-        [C_double_quote] = START,
-        [C_slash] = IN_STRING,
-        [C_star] = IN_STRING,
-        [C_symbol] = IN_STRING,
-        [C_other] = IN_STRING,
-        [C_eof] = ERROR,
-    },
-    [COMMENT_START] = {
-        [C_white] = START,
-        [C_newline] = START,
-        [C_alpha] = IN_ID,
-        [C_digit] = IN_NUM,
-        [C_double_quote] = IN_STRING,
-        [C_slash] = IN_COMMENT_SINGLE,
-        [C_star] = IN_COMMENT_MULTI,
-        [C_symbol] = IN_SYMBOL,
-        [C_other] = ERROR,
-        [C_eof] = ERROR,
-    },
-    [IN_COMMENT_SINGLE] = {
-        [C_white] = IN_COMMENT_SINGLE,
-        [C_newline] = START,
-        [C_alpha] = IN_COMMENT_SINGLE,
-        [C_digit] = IN_COMMENT_SINGLE,
-        [C_double_quote] = IN_COMMENT_SINGLE,
-        [C_slash] = IN_COMMENT_SINGLE,
-        [C_star] = IN_COMMENT_SINGLE,
-        [C_symbol] = IN_COMMENT_SINGLE,
-        [C_other] = IN_COMMENT_SINGLE,
-        [C_eof] = ERROR,
-    },
-    [IN_COMMENT_MULTI] = {
-        [C_white] = IN_COMMENT_MULTI,
-        [C_newline] = IN_COMMENT_MULTI,
-        [C_alpha] = IN_COMMENT_MULTI,
-        [C_digit] = IN_COMMENT_MULTI,
-        [C_double_quote] = IN_COMMENT_MULTI,
-        [C_slash] = IN_COMMENT_MULTI,
-        [C_star] = SEEN_STAR_IN_COMMENT,
-        [C_symbol] = IN_COMMENT_MULTI,
-        [C_other] = IN_COMMENT_MULTI,
-        [C_eof] = ERROR,
-    },
-    [SEEN_STAR_IN_COMMENT] = {
-        [C_white] = IN_COMMENT_MULTI,
-        [C_newline] = IN_COMMENT_MULTI,
-        [C_alpha] = IN_COMMENT_MULTI,
-        [C_digit] = IN_COMMENT_MULTI,
-        [C_double_quote] = IN_COMMENT_MULTI,
-        [C_slash] = START,
-        [C_star] = SEEN_STAR_IN_COMMENT,
-        [C_symbol] = IN_COMMENT_MULTI,
-        [C_other] = IN_COMMENT_MULTI,
-        [C_eof] = ERROR,
-    },
-    [IN_SYMBOL] = {
-        [C_white] = START,
-        [C_newline] = START,
-        [C_alpha] = IN_ID,
-        [C_digit] = IN_NUM,
-        [C_double_quote] = IN_STRING,
-        [C_slash] = COMMENT_START,
-        [C_star] = IN_SYMBOL,
-        [C_symbol] = IN_SYMBOL,
-        [C_other] = ERROR,
-        [C_eof] = START,
-    },
+        [START] = {
+                [C_white] = START,
+                [C_newline] = START,
+                [C_alpha] = IN_ID,
+                [C_digit] = IN_NUM,
+                [C_double_quote] = IN_STRING,
+                [C_slash] = COMMENT_START,
+                [C_star] = IN_SYMBOL,
+                [C_symbol] = IN_SYMBOL,
+                [C_other] = ERROR,
+                [C_eof] = START,
+        },
+        [IN_ID] = {
+                [C_white] = START,
+                [C_newline] = START,
+                [C_alpha] = IN_ID,
+                [C_digit] = IN_ID,
+                [C_double_quote] = IN_STRING,
+                [C_slash] = COMMENT_START,
+                [C_star] = IN_SYMBOL,
+                [C_symbol] = START,
+                [C_other] = ERROR,
+                [C_eof] = ERROR,
+        },
+        [IN_NUM] = {
+                [C_white] = START,
+                [C_alpha] = START,
+                [C_digit] = IN_NUM,
+                [C_double_quote] = IN_STRING,
+                [C_slash] = COMMENT_START,
+                [C_star] = IN_SYMBOL,
+                [C_symbol] = IN_SYMBOL,
+                [C_other] = ERROR,
+                [C_eof] = ERROR,
+        },
+        [IN_STRING] = {
+                [C_white] = IN_STRING,
+                [C_newline] = ERROR,
+                [C_alpha] = IN_STRING,
+                [C_digit] = IN_STRING,
+                [C_double_quote] = START,
+                [C_slash] = IN_STRING,
+                [C_star] = IN_STRING,
+                [C_symbol] = IN_STRING,
+                [C_other] = IN_STRING,
+                [C_eof] = ERROR,
+        },
+        [COMMENT_START] = {
+                [C_white] = START,
+                [C_newline] = START,
+                [C_alpha] = IN_ID,
+                [C_digit] = IN_NUM,
+                [C_double_quote] = IN_STRING,
+                [C_slash] = IN_COMMENT_SINGLE,
+                [C_star] = IN_COMMENT_MULTI,
+                [C_symbol] = IN_SYMBOL,
+                [C_other] = ERROR,
+                [C_eof] = ERROR,
+        },
+        [IN_COMMENT_SINGLE] = {
+                [C_white] = IN_COMMENT_SINGLE,
+                [C_newline] = START,
+                [C_alpha] = IN_COMMENT_SINGLE,
+                [C_digit] = IN_COMMENT_SINGLE,
+                [C_double_quote] = IN_COMMENT_SINGLE,
+                [C_slash] = IN_COMMENT_SINGLE,
+                [C_star] = IN_COMMENT_SINGLE,
+                [C_symbol] = IN_COMMENT_SINGLE,
+                [C_other] = IN_COMMENT_SINGLE,
+                [C_eof] = ERROR,
+        },
+        [IN_COMMENT_MULTI] = {
+                [C_white] = IN_COMMENT_MULTI,
+                [C_newline] = IN_COMMENT_MULTI,
+                [C_alpha] = IN_COMMENT_MULTI,
+                [C_digit] = IN_COMMENT_MULTI,
+                [C_double_quote] = IN_COMMENT_MULTI,
+                [C_slash] = IN_COMMENT_MULTI,
+                [C_star] = SEEN_STAR_IN_COMMENT,
+                [C_symbol] = IN_COMMENT_MULTI,
+                [C_other] = IN_COMMENT_MULTI,
+                [C_eof] = ERROR,
+        },
+        [SEEN_STAR_IN_COMMENT] = {
+                [C_white] = IN_COMMENT_MULTI,
+                [C_newline] = IN_COMMENT_MULTI,
+                [C_alpha] = IN_COMMENT_MULTI,
+                [C_digit] = IN_COMMENT_MULTI,
+                [C_double_quote] = IN_COMMENT_MULTI,
+                [C_slash] = START,
+                [C_star] = SEEN_STAR_IN_COMMENT,
+                [C_symbol] = IN_COMMENT_MULTI,
+                [C_other] = IN_COMMENT_MULTI,
+                [C_eof] = ERROR,
+        },
+        [IN_SYMBOL] = {
+                [C_white] = START,
+                [C_newline] = START,
+                [C_alpha] = IN_ID,
+                [C_digit] = IN_NUM,
+                [C_double_quote] = IN_STRING,
+                [C_slash] = COMMENT_START,
+                [C_star] = IN_SYMBOL,
+                [C_symbol] = IN_SYMBOL,
+                [C_other] = ERROR,
+                [C_eof] = START,
+        },
 };
-
 
 
 /**
  * The equivalence classes for character classification.
  */
 EqClasses eq_classes[128];
+
 /**
  * Initialize the equivalence classes for character classification.
  */
@@ -152,7 +150,7 @@ void initialize_eq_classes() {
     eq_classes['"'] = C_double_quote;
     eq_classes['/'] = C_slash;
     eq_classes['*'] = C_star;
-    eq_classes['+'] = C_symbol; 
+    eq_classes['+'] = C_symbol;
     eq_classes['-'] = C_symbol;
     eq_classes['='] = C_symbol;
     eq_classes['!'] = C_symbol;
@@ -181,8 +179,8 @@ void initialize_eq_classes() {
  * @param filename The name of the file to be processed by the lexer - 
  * @return A pointer to the initialized lexer.
  */
-Lexer* init_lexer(const char* filename, Arena* arena) {
-    Lexer* lexer = arena_alloc(arena, sizeof(Lexer));
+Lexer *init_lexer(const char *filename, Arena *arena) {
+    Lexer *lexer = arena_alloc(arena, sizeof(Lexer));
     if (lexer == NULL) {
         log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
                   "Could not allocate memory for lexer\n");
@@ -195,55 +193,31 @@ Lexer* init_lexer(const char* filename, Arena* arena) {
         log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
                   "Could not allocate memory for lexer input\n");
         return NULL;
-        
+
     }
 
     lexer->arena = arena;
     lexer->filename = strdup(filename);
-    
+
     lexer->position = 0;
-    lexer->stack = init_stack(arena, STACK_CAPACITY);
-    if (lexer->stack == NULL) {
+    lexer->queue = queue_init(arena);
+    if (lexer->queue == NULL) {
         log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for lexer queue\n");
         free(lexer);
         return NULL;
     }
 
-    lexer->error_code =process_input(lexer);
+    lexer->error_code = process_input(lexer);
 
     return lexer;
 }
 
-void destroy_lexer(Lexer* lexer) {
+void destroy_lexer(Lexer *lexer) {
     if (lexer != NULL) {
         if (lexer->input != NULL) {
             free(lexer->input);
         }
     }
-}
-
-/**
- * Strip newline and carriage return characters from a string.
- *
- * @param str The input string.
- * @return A newly allocated string without newline and carriage return characters.
- *         The caller owns the memory and should free it when no longer needed.
- */
-char* strip(const char* str) {
-    size_t len = strlen(str);
-    char* p = calloc(len + 1, sizeof(char));
-
-    if (p) {
-        size_t i = 0;
-        for (size_t j = 0; j < len; j++) {
-            if (str[j] != '\r' && str[j] != '\n') {
-                p[i++] = str[j];
-            }
-        }
-        p[i] = '\0';
-    }
-
-    return p;
 }
 
 /**
@@ -253,7 +227,7 @@ char* strip(const char* str) {
  * @param old_state The previous state of the lexer.
  * @return The TokenType determined based on the token string and the previous state.
  */
-TokenType determine_token_type(const char* token_str, int old_state) {
+TokenType determine_token_type(const char *token_str, int old_state) {
     switch (old_state) {
         case IN_ID:
             return token_type_from_str(token_str);
@@ -282,11 +256,11 @@ TokenType determine_token_type(const char* token_str, int old_state) {
  * @param line - The line number of the token
  * @param token_count - The number of tokens created so far
  */
-void create_token(Lexer* lexer, int old_state, size_t token_start, size_t token_len, int line) {
-    char* token_str = strndup(lexer->input + token_start, token_len);
+void create_token(Lexer *lexer, int old_state, size_t token_start, size_t token_len, int line) {
+    char *token_str = strndup(lexer->input + token_start, token_len);
     TokenType type = determine_token_type(token_str, old_state);
-    Token* token = new_token(lexer->filename, type, token_str, line, lexer->arena);
-    stack_push(lexer->stack, token);
+    Token *token = new_token(lexer->filename, type, token_str, line, lexer->arena);
+    queue_push(lexer->queue, token);
 }
 
 /**
@@ -294,7 +268,7 @@ void create_token(Lexer* lexer, int old_state, size_t token_start, size_t token_
  *
  * @param lexer The lexer object.
  */
-ErrorCode process_input(Lexer* lexer) {
+ErrorCode process_input(Lexer *lexer) {
     int state = START;
     int line = 1;
     size_t token_start = 0;
@@ -305,7 +279,7 @@ ErrorCode process_input(Lexer* lexer) {
 
     while (true) {
         char c = lexer->input[lexer->position];
-        EqClasses eq_class = eq_classes[(int)c];
+        EqClasses eq_class = eq_classes[(int) c];
         old_state = state;
         int next_state = transition[state][eq_class];
 
@@ -332,7 +306,7 @@ ErrorCode process_input(Lexer* lexer) {
         }
 
         state = next_state;  // update state after generating tokens
-        
+
         // If the current character is a symbol and we are not in a string or comment, create a new token for it
         if ((eq_class == C_symbol || eq_class == C_star) && state != IN_STRING && !in_comment) {
             create_token(lexer, IN_SYMBOL, lexer->position, 1, line);
@@ -340,19 +314,23 @@ ErrorCode process_input(Lexer* lexer) {
             token_start = lexer->position + 1;
         }
 
-       // Handle lexer error
+        // Handle lexer error
         if (state == ERROR) {
             if (old_state == IN_STRING && c == '\n') {
-                log_error(ERROR_LEXER_NEWLINE_IN_STRING, lexer->filename, line, "Lexer error: newline in string at line %d", line);
+                log_error(ERROR_LEXER_NEWLINE_IN_STRING, lexer->filename, line,
+                          "Lexer error: newline in string at line %d", line);
                 return ERROR_LEXER_NEWLINE_IN_STRING;
             } else if (old_state == IN_STRING && c == '\0') {
-                log_error(ERROR_LEXER_EOF_IN_STRING, lexer->filename, line, "Lexer error: EOF in string at line %d", line);
+                log_error(ERROR_LEXER_EOF_IN_STRING, lexer->filename, line, "Lexer error: EOF in string at line %d",
+                          line);
                 return ERROR_LEXER_EOF_IN_STRING;
             } else if (c == '\0') {
-                log_error(ERROR_LEXER_UNEXPECTED_EOF, lexer->filename, line, "Lexer error: unexpected EOF at line %d", line);
+                log_error(ERROR_LEXER_UNEXPECTED_EOF, lexer->filename, line, "Lexer error: unexpected EOF at line %d",
+                          line);
                 return ERROR_LEXER_UNEXPECTED_EOF;
             } else {
-                log_error(ERROR_LEXER_ILLEGAL_SYMBOL, lexer->filename, line, "Lexer error: illegal symbol '%c' at line %d", c, line);
+                log_error(ERROR_LEXER_ILLEGAL_SYMBOL, lexer->filename, line,
+                          "Lexer error: illegal symbol '%c' at line %d", c, line);
                 return ERROR_LEXER_ILLEGAL_SYMBOL;
             }
         }
@@ -363,8 +341,8 @@ ErrorCode process_input(Lexer* lexer) {
         if (c == '\0') break; // end of input
     }
 
-    log_message(LOG_LEVEL_DEBUG, "Lexer processed %d tokens\n", token_count);
-    
+    log_message(LOG_LEVEL_DEBUG, ERROR_NONE, "Lexer processed %d tokens\n", token_count);
+
     return ERROR_NONE;
 }
 

@@ -4,7 +4,6 @@
 // FROM https://github.com/tobybell/c-vector
 
 #include <stdbool.h>
-#include "arena.h"
 /**
  * Type: Vector
  * 
@@ -21,7 +20,7 @@ typedef struct vector *vector;
  * The returned vector will have been dynamically allocated, and must be
  * destroyed after use using `vector_destroy`.
  */
-vector vector_create(Arena* arena);
+vector vector_create();
 
 /**
  * Clean up a vector after use.
