@@ -5,15 +5,15 @@
 Stack* init_stack(Arena* arena, size_t capacity) {
     Stack* stack = arena_alloc(arena, sizeof(Stack));
     if (!stack) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
-                  "Could not allocate memory for stack");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to commit memory for the stack", __func__);
         return NULL;
     }
 
     stack->data = arena_alloc(arena, capacity * sizeof(void*));
     if (!stack->data) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
-                  "Could not allocate memory for stack data");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to commit memory for stack data", __func__);
         return NULL;
     }
 
@@ -25,8 +25,8 @@ Stack* init_stack(Arena* arena, size_t capacity) {
 
 bool stack_push(Stack* s, void* value) {
     if (s->top == s->capacity) {
-        log_error(ERROR_BUFFER_FULL, __FILE__, __LINE__,
-                  "Stack is full, cannot push");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_BUFFER_FULL, __FILE__, __LINE__,
+                            "['%s'] : Stack capacity > '%d' elements reached, cannot push", __func__, s->capacity);
         return false;
     }
 
@@ -36,8 +36,8 @@ bool stack_push(Stack* s, void* value) {
 
 bool stack_pop(Stack* s, void** value) {
     if (s->top == 0) {
-        log_error(ERROR_BUFFER_EMPTY,
-                  __FILE__, __LINE__, "Stack is empty, cannot pop");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_BUFFER_EMPTY, __FILE__, __LINE__,
+                            "['%s'] : Stack is empty, cannot pop", __func__);
         return false;
     }
 
@@ -47,8 +47,8 @@ bool stack_pop(Stack* s, void** value) {
 
 void* stack_peek(const Stack* s) {
     if (s->top == 0) {
-        log_error(ERROR_BUFFER_EMPTY, __FILE__, __LINE__,
-                  "Stack is empty, cannot peek");
+       log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_BUFFER_EMPTY, __FILE__, __LINE__,
+                            "['%s'] : Stack is empty, cannot peek", __func__);
         return NULL;
     }
 

@@ -1,10 +1,12 @@
 #include "safer.h"
 
+
 void* safer_malloc(size_t size) {
     void* ptr = malloc(size);
     if (!ptr) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory");
-        exit(EXIT_FAILURE);
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Could not allocate memory ", __func__);
+        return NULL;
     }
     return ptr;
 }
@@ -13,8 +15,8 @@ void safer_free(void* ptr) {
     if (ptr) {
         free(ptr);
     } else {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not free memory");
-        exit(EXIT_FAILURE);
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Could not free memory ", __func__);
     }
 }
 
@@ -39,35 +41,40 @@ unsigned int hash(const char* str, size_t size) {
 char* read_file_into_string(const char* filename) {
     FILE* file = fopen(filename, "r");
     if (file == NULL) {
-        log_error(ERROR_FILE_OPEN, __FILE__, __LINE__, "Failed to open file");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_FILE_OPEN, __FILE__, __LINE__,
+                            "['%s'] : Failed to open file", __func__);
         return NULL;
     }
 
     fseek(file, 0, SEEK_END);
     long length = ftell(file);
     if (length < 0) {
-        log_error(ERROR_FILE_READ, __FILE__, __LINE__, "Failed to determine file size");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_FILE_READ, __FILE__, __LINE__,
+                            "['%s'] : Failed to determine file size", __func__);
         fclose(file);
         return NULL;
     }
     fseek(file, 0, SEEK_SET);
 
     if (length == 0) {
-        log_error(ERROR_FILE_READ, __FILE__, __LINE__, "File is empty");
+         log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_FILE_READ, __FILE__, __LINE__,
+                            "['%s'] : File is empty", __func__);
         fclose(file);
         return NULL;
     }
 
     char* buffer = safer_malloc(length + 1 * sizeof(char));
     if (buffer == NULL) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Failed to allocate memory for file content");
+         log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to allocate memory for file content", __func__);
         fclose(file);
         return NULL;
     }
 
     size_t bytes_read = fread(buffer, 1, length, file);
     if (bytes_read != (size_t)length) {
-        log_error(ERROR_FILE_READ, __FILE__, __LINE__, "Failed to read file");
+         log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_FILE_READ, __FILE__, __LINE__,
+                            "['%s'] : Failed to read file", __func__);
         free(buffer);
         fclose(file);
         return NULL;

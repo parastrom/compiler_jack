@@ -13,6 +13,9 @@ set(JACK_FILES_DIR ${CMAKE_SOURCE_DIR}/src/jack_files)
 # Set the log file name
 set(LOG_FILE "${CMAKE_SOURCE_DIR}/src/logfile.log")
 
+
+set(DEF_FILES_DIR ${CMAKE_SOURCE_DIR}/src/defs)
+
 # Add the executable target
 add_executable(compiler ${SOURCES})
 
@@ -24,3 +27,6 @@ target_compile_definitions(compiler PRIVATE JACK_FILES_DIR="${JACK_FILES_DIR}")
 
 # Set the log file as a compile definition
 target_compile_definitions(compiler PRIVATE LOG_FILE="${LOG_FILE}")
+
+# Makes path to definitions available to the application
+target_compile_definitions(compiler PRIVATE DEF_FILES_DIR=${DEF_FILES_DIR})

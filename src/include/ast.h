@@ -158,6 +158,7 @@ struct ASTNode {
     } data;
     const char* filename;
     int line;
+    size_t byte_offset;
 };
 
 typedef enum {

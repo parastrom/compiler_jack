@@ -1,6 +1,8 @@
 #ifndef REFAC_LEXER_H
 #define REFAC_LEXER_H
 
+#define PATH_TO_EQ_DEF_FILE TOSTRING(DEF_FILES_DIR/eq_classes.def)
+
 #include <stdio.h>
 #include "logger.h"
 #include "token_queue.h"
@@ -15,7 +17,9 @@ typedef struct
     int cur_len;
     TokenQueue* queue;
     ErrorCode error_code;
+    vector line_starts;
     Arena* arena;
+    Arena* errorArena;
 } Lexer;
 
 typedef enum
@@ -44,7 +48,7 @@ typedef enum
     SEEN_STAR_IN_COMMENT,
     SEEN_END_QUOTE,
     IN_SYMBOL,
-    ERROR,
+    IN_ERROR,
 } States;
 
 Lexer *init_lexer(const char *filename, Arena* arena);

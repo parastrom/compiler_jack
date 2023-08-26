@@ -63,8 +63,8 @@ int find_jack_files(const char *dir_name, CompilerState *state) {
   DIR *dir = opendir(name_buf);
   if (dir == NULL) {
     perror("Error opening directory");
-    log_error(ERROR_OPEN_DIRECTORY, __FILE__, __LINE__,
-              "Could not open the given directory: %s\n", name_buf);
+    log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_OPEN_DIRECTORY, __FILE__, __LINE__,
+                            "['%s'] : Could not open directory > '%s'", __func__, name_buf);
     return 0;
   }
 
@@ -78,8 +78,8 @@ int find_jack_files(const char *dir_name, CompilerState *state) {
                              2; // +2 for '/' and null terminator
       file_path = malloc(file_path_len);
       if (!file_path) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
-                  "Could not allocate memory for file path\n");
+          log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to allocate memory for file path", __func__);
         closedir(dir);
         return 0;
       }
@@ -89,8 +89,8 @@ int find_jack_files(const char *dir_name, CompilerState *state) {
                                 4; // +4 for ".vm", '/' and null terminator
       vm_file_path = malloc(vm_file_path_len);
       if (!vm_file_path) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
-                  "Could not allocate memory for vm file path\n");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to allocate memory for vm file path", __func__);
         free(file_path);
         closedir(dir);
         return 0;
@@ -116,6 +116,7 @@ int find_jack_files(const char *dir_name, CompilerState *state) {
 int compile(CompilerState *state) {
 
   initialize_eq_classes();
+  initialize_logger_arena();
 
   char buf[256];
   snprintf(buf, sizeof(buf), "%s/stdlib.json", JACK_FILES_DIR);
@@ -132,7 +133,7 @@ int compile(CompilerState *state) {
   for (int i = 0; i < state->num_of_files; i++) {
     Arena *fileArena = init_arena(16);
     Lexer *lexer = init_lexer(vector_get(state->jack_files, i), fileArena);
-    Parser *parser = init_parser(lexer->queue, state->arena);
+    Parser *parser = init_parser(lexer->queue, lexer->line_starts, state->arena);
     ASTNode *class_node = parse_class(parser);
     vector_push(program_node->data.program->classes, class_node);
 
@@ -145,6 +146,9 @@ int compile(CompilerState *state) {
   log_message(LOG_LEVEL_INFO, ERROR_NONE, "Finished building\n");
   visitor->phase = ANALYZE;
   ast_node_accept(visitor, program_node);
+
+  print_all_errors();
+  print_error_summary();
 
   destroy_arena(state->arena);
 

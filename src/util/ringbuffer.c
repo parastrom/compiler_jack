@@ -4,7 +4,8 @@
 RingBuffer* init_ringbuffer() {
     RingBuffer* buffer = malloc(sizeof(RingBuffer));
     if (buffer == NULL) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for ring buffer\n");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] :  Could not allocate memory for the ringbuffer", __func__);
         return NULL;
     }
     buffer->write_idx = 0;
@@ -18,7 +19,8 @@ bool ringbuffer_push(RingBuffer* rb, Token* value) {
         next_write_idx = 0;
     }
     if (next_write_idx == rb->read_idx) {
-        log_error(ERROR_BUFFER_FULL, __FILE__, __LINE__, "Ring buffer is full, cannot push\n");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_BUFFER_FULL, __FILE__, __LINE__,
+                            "['%s'] : Ringbuffer full, cannot push", __func__);
         return false;
     }
 
@@ -30,7 +32,8 @@ bool ringbuffer_push(RingBuffer* rb, Token* value) {
 
 bool ringbuffer_pop(RingBuffer* rb, Token** value) {
     if (rb->read_idx == rb->write_idx) {
-        log_error(ERROR_BUFFER_EMPTY, __FILE__, __LINE__, "Ring buffer is empty, cannot pop\n");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_BUFFER_EMPTY, __FILE__, __LINE__,
+                            "['%s'] : Ringbuffer empty, cannot pop", __func__);
         return false;
     }
 
@@ -45,7 +48,8 @@ bool ringbuffer_pop(RingBuffer* rb, Token** value) {
 
 Token* ringbuffer_peek(const RingBuffer* rb) {
     if (rb_is_empty(rb)) {
-        log_error(ERROR_BUFFER_EMPTY, __FILE__, __LINE__, "Ring buffer is empty, cannot peek\n");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_BUFFER_EMPTY, __FILE__, __LINE__,
+                            "['%s'] : Ringbuffer empty, cannot peek", __func__);
         return NULL;
     }
     return rb->data[rb->read_idx];
@@ -53,7 +57,8 @@ Token* ringbuffer_peek(const RingBuffer* rb) {
 
 void ringbuffer_destroy(RingBuffer* rb) {
     if (rb == NULL) {
-        log_error(ERROR_NULL_POINTER, __FILE__, __LINE__, "Ring buffer is NULL, cannot destroy\n");
+       log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_NULL_POINTER, __FILE__, __LINE__,
+                            "['%s'] : rb is NULL", __func__);
         return;
     }
 

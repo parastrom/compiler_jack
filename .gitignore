@@ -15,3 +15,6 @@ symbols.h
 *.log
 *.pdf
 .gitignore
+.cache/
+.cmake/
+CMakeFiles/

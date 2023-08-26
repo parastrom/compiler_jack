@@ -181,8 +181,8 @@ static void extend_if_necessary(vector v) {
     void **new_elems = realloc(v->elems, v->capacity * sizeof(void *));
     if (new_elems == NULL) {
         // Handle reallocation failure
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Failed to reallocate memory for vector");
-        exit(EXIT_FAILURE);
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to reallocate memory for vector", __func__);
     }
     v->elems = new_elems;
 

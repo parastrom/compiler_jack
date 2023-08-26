@@ -241,7 +241,8 @@ Token *new_token(const char* filename, TokenType type, char *lx, int line, Arena
     Token *token = arena_alloc(arena, sizeof(Token));
     if (token == NULL)
     {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Failed to allocate memory for token");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to allocate memory for a token", __func__);
         return NULL;
     }
     token->filename = filename;

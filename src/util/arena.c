@@ -74,7 +74,8 @@ static bool commit_memory(void* addr, size_t size) {
 void* arena_alloc(Arena* arena, size_t size) {
     // Check if there's enough space
     if (!arena || arena->current + size > arena->reserved_end) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Arena out of space!");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Arena out of space", __func__);
         return NULL;
     }
 
@@ -86,7 +87,8 @@ void* arena_alloc(Arena* arena, size_t size) {
         size_t needed_size = ((char*)arena->current + size) - (char*)arena->committed_end;
         size_t commit_size = (needed_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
         if (!commit_memory(arena->committed_end, needed_size)) {
-            log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Failed to commit memory!");
+            log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to commit memory from the arena", __func__);
             return NULL;
         }
         arena->committed_end = (char*)arena->committed_end + commit_size;
@@ -101,7 +103,8 @@ void* arena_alloc(Arena* arena, size_t size) {
 
 void reset_arena(Arena* arena) {
     if (!arena) {
-        log_error(ERROR_NULL_POINTER, __FILE__, __LINE__, "Passed NULL pointer to reset_arena!");
+         log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_NULL_POINTER, __FILE__, __LINE__,
+                            "['%s'] : Null pointer provided", __func__);
         return;
     }
     arena->current = arena->start;
@@ -109,18 +112,20 @@ void reset_arena(Arena* arena) {
 
 void destroy_arena(Arena* arena) {
     if (!arena) {
-        log_error(ERROR_NULL_POINTER, __FILE__, __LINE__, "Passed NULL pointer to arena destructor!");
+         log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_NULL_POINTER, __FILE__, __LINE__,
+                            "['%s'] : Null pointer provided", __func__);
         return;
     }
 
     #ifdef _WIN32
         if (!VirtualFree(arena->start, 0, MEM_RELEASE)) {
-            log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Failed to free reserved memory in destroy_arena!");
+            log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to free reserved memory from the arena", __func__);
         }
     #else
         if (munmap(arena->start, (char*)arena->reserved_end - (char*)arena->start) == -1) {
-            log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
-                        "Failed to unmap reserved memory in destroy_arena!");
+            log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to unmap memory arena", __func__);
         }
     #endif
     free(arena);

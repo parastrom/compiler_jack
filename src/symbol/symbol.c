@@ -11,8 +11,9 @@ Kind string_to_kind(const char* kind_str) {
     } else if (strcmp(kind_str, "KIND_CONSTRUCTOR") == 0) {
         return KIND_CONSTRUCTOR;
     }else {
-        log_error(ERROR_SEMANTIC_INVALID_KIND, __FILE__, __LINE__, "Invalid kind string");
-        exit(EXIT_FAILURE);
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_SEMANTIC_INVALID_KIND, __FILE__, __LINE__,
+                            "Invalid string passed to ['%s']", __func__);
+        return KIND_NONE;
     }
 }
 
@@ -120,6 +121,12 @@ SymbolTable* add_child_table(SymbolTable* parent, Scope scope) {
  */
 
 Symbol* symbol_table_lookup(SymbolTable* table, char* name, Depth depth) {
+
+    if (!table) {
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_NULL_POINTER, __FILE__, __LINE__,
+                            "['%s] : SymbolTable pointer was null", __func__);
+    }
+
     // Current table lookup
     for (int i = 0; i < vector_size(table->symbols); ++i) {
         Symbol* symbol = (Symbol*)vector_get(table->symbols, i);
@@ -186,8 +193,9 @@ const char* type_to_str(Type* type) {
         case TYPE_USER_DEFINED:
             return type->userDefinedType;
         default:
-            log_error(ERROR_INVALID_INPUT, __FILE__, __LINE__, "How did we get here");
-            exit(EXIT_FAILURE);
+            log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_INVALID_INPUT, __FILE__, __LINE__,
+                            "Invalid type passed to ['%s']", __func__);
+            return NULL;
     }
 }
 
@@ -233,8 +241,8 @@ FunctionInfo* parse_function_from_json(cJSON* function_json, Arena* arena) {
 vector parse_jack_stdlib_from_json(const char* json_content, Arena* arena) {
     cJSON *root = cJSON_Parse(json_content);
     if (root == NULL) {
-        // Handle parsing error
-        log_error(ERROR_JSON_PARSING, __FILE__, __LINE__, cJSON_GetErrorPtr());
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_JSON_PARSING, __FILE__, __LINE__,
+                            "['%s'] : %s", __func__, cJSON_GetErrorPtr());
         exit(EXIT_FAILURE);
     }
 
@@ -245,10 +253,11 @@ vector parse_jack_stdlib_from_json(const char* json_content, Arena* arena) {
     cJSON_ArrayForEach(class_item, root) {
         ClassInfo *class_info = safer_malloc(sizeof(ClassInfo));
 
-        // Extract the class name
+
         cJSON *class_name = cJSON_GetObjectItem(class_item, "name");
         if (class_name == NULL || class_name->type != cJSON_String) {
-            log_error(ERROR_JSON_STRUCTURE, __FILE__, __LINE__, "Expected 'name' field in class object");
+            log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_JSON_STRUCTURE, __FILE__, __LINE__,
+                            "['%s'] : Expected 'name' field in class object ", __func__);
             exit(EXIT_FAILURE);
         }
         class_info->name = strdup(class_name->valuestring);
@@ -276,6 +285,7 @@ vector parse_jack_stdlib_from_json(const char* json_content, Arena* arena) {
     return std_classes;
 }
 
+
 SymbolTable* create_table_for_func(Kind kind, SymbolTable* parent_table) {
     switch(kind) {
         case KIND_CONSTRUCTOR:
@@ -285,8 +295,9 @@ SymbolTable* create_table_for_func(Kind kind, SymbolTable* parent_table) {
         case KIND_FUNCTION:
             return create_table(SCOPE_FUNCTION, parent_table, parent_table->arena);
         default:
-            log_error(ERROR_SEMANTIC_INVALID_SCOPE, __FILE__, __LINE__, "Invalid function kind");
-            exit(EXIT_FAILURE);
+            log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_SEMANTIC_INVALID_SCOPE, __FILE__, __LINE__,
+                            "['%s'] : Invalid function type in stdlib.json ", __func__);
+            return NULL;
     }
 }
 

@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include "logger.h"
+#include "vector.h"
 
 void* safer_malloc(size_t size);
 void safer_free(void* ptr);

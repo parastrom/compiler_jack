@@ -5,8 +5,8 @@ TokenQueue *queue_init(Arena *arena) {
     TokenQueue *queue = arena_alloc(arena, sizeof(TokenQueue));
 
     if (!queue) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
-                  "Failed to allocate memory for TokenQueue");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to allocate memory for the token queue", __func__);
         return NULL;
     }
 
@@ -14,8 +14,8 @@ TokenQueue *queue_init(Arena *arena) {
     queue->list = vector_create();
 
     if (!queue->list) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
-                  "Failed to create vector for TokenQueue");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to create list for the token queue", __func__);
         return NULL;
     }
 
@@ -24,8 +24,8 @@ TokenQueue *queue_init(Arena *arena) {
 
 bool queue_push(TokenQueue *queue, Token *ptr) {
     if (!queue || !ptr) {
-        log_error(ERROR_NULL_POINTER, __FILE__, __LINE__,
-                  "Null pointer provided to queue_push");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_NULL_POINTER, __FILE__, __LINE__,
+                            "['%s'] : Null pointer provided", __func__);
         return false;
     }
 
@@ -35,14 +35,14 @@ bool queue_push(TokenQueue *queue, Token *ptr) {
 
 bool queue_pop(TokenQueue *queue, Token **val) {
     if (!queue || !val) {
-        log_error(ERROR_NULL_POINTER, __FILE__, __LINE__,
-                  "Null pointer provided to queue_pop");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_NULL_POINTER, __FILE__, __LINE__,
+                            "['%s'] : Null pointer provided", __func__);
         return false;
     }
 
     if (queue->idx >= vector_size(queue->list)) {
-        log_error(ERROR_OUT_OF_BOUNDS, __FILE__, __LINE__,
-                  "Attempted to pop beyond the end of the queue");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_NULL_POINTER, __FILE__, __LINE__,
+                            "['%s'] : Null pointer provided", __func__);
         return false;
     }
 
@@ -53,8 +53,8 @@ bool queue_pop(TokenQueue *queue, Token **val) {
 
 Token *queue_peek(const TokenQueue *queue) {
     if (!queue) {
-        log_error(ERROR_NULL_POINTER, __FILE__, __LINE__,
-                  "Null pointer provided to queue_peek");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_NULL_POINTER, __FILE__, __LINE__,
+                            "['%s'] : Null pointer provided", __func__);
         return NULL;
     }
 
@@ -68,8 +68,8 @@ Token *queue_peek(const TokenQueue *queue) {
 
 Token* queue_peek_offset(TokenQueue *queue, int offset) {
     if (!queue) {
-        log_error(ERROR_NULL_POINTER, __FILE__, __LINE__,
-                  "Null pointer provided to queue_peek");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_NULL_POINTER, __FILE__, __LINE__,
+                            "['%s'] : Null pointer provided", __func__);
         return NULL;
     }
 

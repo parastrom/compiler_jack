@@ -9,11 +9,12 @@
 typedef struct Parser {
     TokenQueue* queue;
     Token* currentToken;
+    vector line_offsets;
     bool has_error;
     Arena* arena;
 } Parser;
 
-Parser* init_parser(TokenQueue* lexer, Arena* arena);
+Parser* init_parser(TokenQueue* queue, vector line_offsets, Arena* arena);
 ASTNode* init_program();
 ASTNode* parse_class(Parser* parser);
 ASTNode* parse_class_var_dec(Parser* parser);

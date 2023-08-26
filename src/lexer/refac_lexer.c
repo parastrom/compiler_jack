@@ -16,7 +16,7 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
                 [C_slash] = COMMENT_START,
                 [C_star] = IN_SYMBOL,
                 [C_symbol] = IN_SYMBOL,
-                [C_other] = ERROR,
+                [C_other] = IN_ERROR,
                 [C_eof] = START,
         },
         [IN_ID] = {
@@ -28,8 +28,8 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
                 [C_slash] = COMMENT_START,
                 [C_star] = IN_SYMBOL,
                 [C_symbol] = START,
-                [C_other] = ERROR,
-                [C_eof] = ERROR,
+                [C_other] = IN_ERROR,
+                [C_eof] = IN_ERROR,
         },
         [IN_NUM] = {
                 [C_white] = START,
@@ -39,12 +39,12 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
                 [C_slash] = COMMENT_START,
                 [C_star] = IN_SYMBOL,
                 [C_symbol] = IN_SYMBOL,
-                [C_other] = ERROR,
-                [C_eof] = ERROR,
+                [C_other] = IN_ERROR,
+                [C_eof] = IN_ERROR,
         },
         [IN_STRING] = {
                 [C_white] = IN_STRING,
-                [C_newline] = ERROR,
+                [C_newline] = IN_ERROR,
                 [C_alpha] = IN_STRING,
                 [C_digit] = IN_STRING,
                 [C_double_quote] = START,
@@ -52,7 +52,7 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
                 [C_star] = IN_STRING,
                 [C_symbol] = IN_STRING,
                 [C_other] = IN_STRING,
-                [C_eof] = ERROR,
+                [C_eof] = IN_ERROR,
         },
         [COMMENT_START] = {
                 [C_white] = START,
@@ -63,8 +63,8 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
                 [C_slash] = IN_COMMENT_SINGLE,
                 [C_star] = IN_COMMENT_MULTI,
                 [C_symbol] = IN_SYMBOL,
-                [C_other] = ERROR,
-                [C_eof] = ERROR,
+                [C_other] = IN_ERROR,
+                [C_eof] = IN_ERROR,
         },
         [IN_COMMENT_SINGLE] = {
                 [C_white] = IN_COMMENT_SINGLE,
@@ -76,7 +76,7 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
                 [C_star] = IN_COMMENT_SINGLE,
                 [C_symbol] = IN_COMMENT_SINGLE,
                 [C_other] = IN_COMMENT_SINGLE,
-                [C_eof] = ERROR,
+                [C_eof] = IN_ERROR,
         },
         [IN_COMMENT_MULTI] = {
                 [C_white] = IN_COMMENT_MULTI,
@@ -88,7 +88,7 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
                 [C_star] = SEEN_STAR_IN_COMMENT,
                 [C_symbol] = IN_COMMENT_MULTI,
                 [C_other] = IN_COMMENT_MULTI,
-                [C_eof] = ERROR,
+                [C_eof] = IN_ERROR,
         },
         [SEEN_STAR_IN_COMMENT] = {
                 [C_white] = IN_COMMENT_MULTI,
@@ -100,7 +100,7 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
                 [C_star] = SEEN_STAR_IN_COMMENT,
                 [C_symbol] = IN_COMMENT_MULTI,
                 [C_other] = IN_COMMENT_MULTI,
-                [C_eof] = ERROR,
+                [C_eof] = IN_ERROR,
         },
         [IN_SYMBOL] = {
                 [C_white] = START,
@@ -111,7 +111,7 @@ static int transition[NUM_STATES][NUM_EQ_CLASSES] = {
                 [C_slash] = COMMENT_START,
                 [C_star] = IN_SYMBOL,
                 [C_symbol] = IN_SYMBOL,
-                [C_other] = ERROR,
+                [C_other] = IN_ERROR,
                 [C_eof] = START,
         },
 };
@@ -130,46 +130,17 @@ void initialize_eq_classes() {
         eq_classes[i] = C_other;
     }
 
-    for (char c = 'a'; c <= 'z'; ++c) {
-        eq_classes[c] = C_alpha;
-    }
+    #define EQ_CLASS_DEF_RANGE(start_char, end_char, class_val) \
+        for (char c = start_char; c <= end_char; ++c) { \
+            eq_classes[c] = class_val; \
+        }
 
-    for (char c = 'A'; c <= 'Z'; ++c) {
-        eq_classes[c] = C_alpha;
-    }
+    #define EQ_CLASS_DEF_SINGLE(char_val, class_val) eq_classes[char_val] = class_val;
 
-    for (char c = '0'; c <= '9'; ++c) {
-        eq_classes[c] = C_digit;
-    }
+    #include PATH_TO_EQ_DEF_FILE
 
-    //Set specific
-    eq_classes[' '] = C_white;
-    eq_classes['\t'] = C_white;
-    eq_classes['\r'] = C_white;
-    eq_classes['\n'] = C_newline;
-    eq_classes['"'] = C_double_quote;
-    eq_classes['/'] = C_slash;
-    eq_classes['*'] = C_star;
-    eq_classes['+'] = C_symbol;
-    eq_classes['-'] = C_symbol;
-    eq_classes['='] = C_symbol;
-    eq_classes['!'] = C_symbol;
-    eq_classes['&'] = C_symbol;
-    eq_classes['|'] = C_symbol;
-    eq_classes['<'] = C_symbol;
-    eq_classes['>'] = C_symbol;
-    eq_classes['.'] = C_symbol;
-    eq_classes['_'] = C_alpha;
-    eq_classes['('] = C_symbol;
-    eq_classes[')'] = C_symbol;
-    eq_classes['['] = C_symbol;
-    eq_classes[']'] = C_symbol;
-    eq_classes['{'] = C_symbol;
-    eq_classes['}'] = C_symbol;
-    eq_classes[';'] = C_symbol;
-    eq_classes[','] = C_symbol;
-    eq_classes['~'] = C_symbol;
-    eq_classes['\0'] = C_eof;
+    #undef EQ_CLASS_DEF_RANGE
+    #undef EQ_CLASS_DEF_SINGLE
 }
 
 /**
@@ -179,30 +150,32 @@ void initialize_eq_classes() {
  * @param filename The name of the file to be processed by the lexer - 
  * @return A pointer to the initialized lexer.
  */
-Lexer *init_lexer(const char *filename, Arena *arena) {
-    Lexer *lexer = arena_alloc(arena, sizeof(Lexer));
+Lexer *init_lexer(const char *filename, Arena *lexerArena) {
+    Lexer *lexer = arena_alloc(lexerArena, sizeof(Lexer));
     if (lexer == NULL) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
-                  "Could not allocate memory for lexer\n");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to allocate memory for the lexer", __func__);
         return NULL;
     }
 
     lexer->input = read_file_into_string(filename);
     if (lexer->input == NULL) {
         free(lexer);
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
-                  "Could not allocate memory for lexer input\n");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to allocate memory for file buffer", __func__);
         return NULL;
 
     }
 
-    lexer->arena = arena;
+    lexer->arena = lexerArena;
     lexer->filename = strdup(filename);
 
     lexer->position = 0;
-    lexer->queue = queue_init(arena);
+    lexer->queue = queue_init(lexerArena);
+    lexer->line_starts = vector_create();
     if (lexer->queue == NULL) {
-        log_error(ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__, "Could not allocate memory for lexer queue\n");
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to allocate memory for lexer queue", __func__);
         free(lexer);
         return NULL;
     }
@@ -284,7 +257,12 @@ ErrorCode process_input(Lexer *lexer) {
         int next_state = transition[state][eq_class];
 
         // Handle newline increment
-        if (c == '\n') line++;
+        if (c == '\n') {
+             line++;
+             size_t* offset = arena_alloc(loggerArena, sizeof(size_t));
+            *offset = lexer->position;
+            vector_push(lexer->line_starts, offset);
+        }
 
         // Check if we were in a comment
         was_in_comment = (state >= IN_COMMENT_SINGLE && state <= SEEN_STAR_IN_COMMENT);
@@ -315,22 +293,22 @@ ErrorCode process_input(Lexer *lexer) {
         }
 
         // Handle lexer error
-        if (state == ERROR) {
+        if (state == IN_ERROR) {
             if (old_state == IN_STRING && c == '\n') {
-                log_error(ERROR_LEXER_NEWLINE_IN_STRING, lexer->filename, line,
-                          "Lexer error: newline in string at line %d", line);
+                log_error_with_offset(ERROR_PHASE_LEXER, ERROR_LEXER_NEWLINE_IN_STRING, lexer->filename, line,
+                                      lexer->position, "['%s'] : A string cannot contain a new line", __func__);
                 return ERROR_LEXER_NEWLINE_IN_STRING;
             } else if (old_state == IN_STRING && c == '\0') {
-                log_error(ERROR_LEXER_EOF_IN_STRING, lexer->filename, line, "Lexer error: EOF in string at line %d",
-                          line);
+                log_error_with_offset(ERROR_PHASE_LEXER, ERROR_LEXER_EOF_IN_STRING, lexer->filename, line,
+                                      lexer->position, "['%s'] : A string cannot contain file EOF", __func__);
                 return ERROR_LEXER_EOF_IN_STRING;
             } else if (c == '\0') {
-                log_error(ERROR_LEXER_UNEXPECTED_EOF, lexer->filename, line, "Lexer error: unexpected EOF at line %d",
-                          line);
+                log_error_with_offset(ERROR_PHASE_LEXER, ERROR_LEXER_UNEXPECTED_EOF, lexer->filename, line,
+                                      lexer->position, "['%s'] : Unexpected EOF", __func__);
                 return ERROR_LEXER_UNEXPECTED_EOF;
             } else {
-                log_error(ERROR_LEXER_ILLEGAL_SYMBOL, lexer->filename, line,
-                          "Lexer error: illegal symbol '%c' at line %d", c, line);
+                log_error_with_offset(ERROR_PHASE_LEXER, ERROR_LEXER_NEWLINE_IN_STRING, lexer->filename, line,
+                                      lexer->position, "['%s'] : Illegal symbol > '%c'", __func__, c);
                 return ERROR_LEXER_ILLEGAL_SYMBOL;
             }
         }
