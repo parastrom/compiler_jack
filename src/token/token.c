@@ -185,7 +185,7 @@ bool is_token_category(TokenType type, TokenCategory category)
     return (get_token_category(type) & category) != 0;
 }
 
-const char* category_to_string(TokenCategory category) {
+const char* token_category_to_string(TokenCategory category) {
     switch (category) {
         case TOKEN_CATEGORY_UNRECOGNISED:
             return "TOKEN_CATEGORY_UNRECOGNISED";

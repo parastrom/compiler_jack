@@ -37,7 +37,7 @@ Parser* init_parser(TokenQueue* queue, vector line_offsets, Arena* arena) {
 void expect_and_consume(Parser* parser, TokenType expected) {
     if (parser->currentToken->type != expected) {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-                              (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
+                              (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
                               "['%s'] : Expected token > '%s', instead received > '%s'", token_type_to_string(expected),
                               token_type_to_string(parser->currentToken->type)
                               );
@@ -55,7 +55,7 @@ ASTNode* parse_class(Parser* parser) {
     queue_pop(parser->queue, &parser->currentToken);
     node->filename = parser->currentToken->filename;
     node->line = parser->currentToken->line;
-    node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
+    node->byte_offset = *(size_t*)vector_get(parser->line_offsets, parser->currentToken->line);
     expect_and_consume(parser, TOKEN_TYPE_CLASS);
 
     if (parser->currentToken->type == TOKEN_TYPE_ID) {
@@ -63,7 +63,7 @@ ASTNode* parse_class(Parser* parser) {
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-            (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
+            (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
             "['%s'] : Expected token > '%s', instead received > '%s'", token_type_to_string(TOKEN_TYPE_ID),
             token_type_to_string(parser->currentToken->type)
         );
@@ -117,9 +117,10 @@ ASTNode* parse_class_var_dec(Parser* parser) {
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-            (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
-            "['%s'] : Expected category > '%s', instead received > '%s'", category_to_string(TOKEN_CATEGORY_CLASS_VAR),
-             token_type_to_string(parser->currentToken->type)
+                              (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
+                              "['%s'] : Expected category > '%s', instead received > '%s'",
+                              token_category_to_string(TOKEN_CATEGORY_CLASS_VAR),
+                              token_type_to_string(parser->currentToken->type)
         );
         parser->has_error = true;
     }
@@ -131,9 +132,10 @@ ASTNode* parse_class_var_dec(Parser* parser) {
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-            (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
-            "['%s'] : Expected category > '%s', instead received > '%s'", category_to_string(TOKEN_CATEGORY_TYPE),
-            token_type_to_string(parser->currentToken->type)
+                              (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
+                              "['%s'] : Expected category > '%s', instead received > '%s'",
+                              token_category_to_string(TOKEN_CATEGORY_TYPE),
+                              token_type_to_string(parser->currentToken->type)
         );
         parser->has_error = true;
     }
@@ -144,7 +146,7 @@ ASTNode* parse_class_var_dec(Parser* parser) {
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-            (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
+            (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
             "['%s'] : Expected token > '%s', instead received > '%s'", token_type_to_string(TOKEN_TYPE_ID),
             token_type_to_string(parser->currentToken->type)
         );
@@ -160,7 +162,7 @@ ASTNode* parse_class_var_dec(Parser* parser) {
             queue_pop(parser->queue, &parser->currentToken);
         } else {
             log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-                (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
+                (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
                 "['%s'] : Expected token > '%s', instead received > '%s'", token_type_to_string(TOKEN_TYPE_ID),
                 token_type_to_string(parser->currentToken->type)
             );
@@ -194,9 +196,10 @@ ASTNode* parse_subroutine_dec(Parser* parser) {
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-            (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
-            "['%s'] : Expected category > '%s', instead received > '%s'", category_to_string(TOKEN_CATEGORY_SUBROUTINE_DEC),
-            token_type_to_string(parser->currentToken->type)
+                              (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
+                              "['%s'] : Expected category > '%s', instead received > '%s'",
+                              token_category_to_string(TOKEN_CATEGORY_SUBROUTINE_DEC),
+                              token_type_to_string(parser->currentToken->type)
         );
         parser->has_error = true;
     }
@@ -207,9 +210,10 @@ ASTNode* parse_subroutine_dec(Parser* parser) {
         queue_pop(parser->queue, &parser->currentToken);
     }else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-            (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
-            "['%s'] : Expected category > '%s', instead received > '%s'", category_to_string(TOKEN_CATEGORY_TYPE),
-            token_type_to_string(parser->currentToken->type)
+                              (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
+                              "['%s'] : Expected category > '%s', instead received > '%s'",
+                              token_category_to_string(TOKEN_CATEGORY_TYPE),
+                              token_type_to_string(parser->currentToken->type)
         );
         parser->has_error = true;
     }
@@ -219,7 +223,7 @@ ASTNode* parse_subroutine_dec(Parser* parser) {
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-            (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
+            (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
             "['%s'] : Expected token > '%s', instead received > '%s'", token_type_to_string(TOKEN_TYPE_ID),
             token_type_to_string(parser->currentToken->type)
         );
@@ -255,7 +259,7 @@ ASTNode* parse_parameter_list(Parser* parser) {
             queue_pop(parser->queue, &parser->currentToken);
         } else {
              log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-                (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
+                (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
                 "['%s'] : Expected token > '%s', instead received > '%s'", token_type_to_string(TOKEN_TYPE_ID),
                 token_type_to_string(parser->currentToken->type)
              );
@@ -270,9 +274,10 @@ ASTNode* parse_parameter_list(Parser* parser) {
                 queue_pop(parser->queue, &parser->currentToken);
             } else {
                 log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-                    (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
-                    "['%s'] : Expected category type > '%s', instead received > '%s'", category_to_string(TOKEN_CATEGORY_TYPE),
-                    token_type_to_string(parser->currentToken->type)
+                                      (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
+                                      "['%s'] : Expected category type > '%s', instead received > '%s'",
+                                      token_category_to_string(TOKEN_CATEGORY_TYPE),
+                                      token_type_to_string(parser->currentToken->type)
                 );
                 parser->has_error = true;
             }
@@ -281,7 +286,7 @@ ASTNode* parse_parameter_list(Parser* parser) {
                 queue_pop(parser->queue, &parser->currentToken);
             } else {
                 log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-                    (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
+                    (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
                     "['%s'] : Expected token > '%s', instead received > '%s'", token_type_to_string(TOKEN_TYPE_ID),
                      token_type_to_string(parser->currentToken->type)
                 );
@@ -338,9 +343,10 @@ ASTNode* parse_var_dec(Parser* parser) {
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-            (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
-            "['%s'] : Expected category > '%s', instead received > '%s'", category_to_string(TOKEN_CATEGORY_TYPE),
-            token_type_to_string(parser->currentToken->type)
+                              (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
+                              "['%s'] : Expected category > '%s', instead received > '%s'",
+                              token_category_to_string(TOKEN_CATEGORY_TYPE),
+                              token_type_to_string(parser->currentToken->type)
         );
         parser->has_error = true;
     }
@@ -351,7 +357,7 @@ ASTNode* parse_var_dec(Parser* parser) {
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-            (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
+            (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
             "['%s'] : Expected token > '%s', instead received > '%s'", token_type_to_string(TOKEN_TYPE_ID),
             token_type_to_string(parser->currentToken->type)
         );
@@ -366,7 +372,7 @@ ASTNode* parse_var_dec(Parser* parser) {
             queue_pop(parser->queue, &parser->currentToken);
         } else {
             log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-                (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
+                (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
                 "['%s'] : Expected token > '%s', instead received > '%s'", token_type_to_string(TOKEN_TYPE_ID),
                 token_type_to_string(parser->currentToken->type)
             );
@@ -426,9 +432,10 @@ ASTNode* parse_statement(Parser* parser) {
         node->data.statement->data.returnStatement = parse_return_statement(parser);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-            (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
-            "['%s'] : Expected category > '%s', instead received > '%s'", category_to_string(TOKEN_CATEGORY_STATEMENT),
-            token_type_to_string(parser->currentToken->type)
+                              (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
+                              "['%s'] : Expected category > '%s', instead received > '%s'",
+                              token_category_to_string(TOKEN_CATEGORY_STATEMENT),
+                              token_type_to_string(parser->currentToken->type)
         );
         parser->has_error = true;
     }
@@ -454,7 +461,7 @@ ASTNode* parse_let_statement(Parser* parser) {
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-            (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
+            (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
             "['%s'] : Expected token > '%s', instead received > '%s'", token_type_to_string(TOKEN_TYPE_ID),
             token_type_to_string(parser->currentToken->type)
         );
@@ -574,7 +581,7 @@ ASTNode* parse_subroutine_call(Parser *parser) {
             queue_pop(parser->queue, &parser->currentToken);
         } else {
             log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-                (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
+                (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
                 "['%s'] : Expected token > '%s', instead received > '%s'", token_type_to_string(TOKEN_TYPE_ID),
                 token_type_to_string(parser->currentToken->type)
             );
@@ -679,7 +686,7 @@ ASTNode* parse_term(Parser* parser) {
                  }
             } else {
                 log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-                    (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
+                    (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
                     "['%s'] : Unexpected token after period > '%s'",
                     token_type_to_string(secondPeek->type)
                 );
@@ -703,7 +710,7 @@ ASTNode* parse_term(Parser* parser) {
         node->data.term->data.unaryOp.term = parse_term(parser);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-            (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
+            (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
             "['%s'] : Unexpected token in term > '%s'", token_type_to_string(parser->currentToken->type)
         );
         parser->has_error = true;
@@ -735,7 +742,7 @@ ASTNode* parse_var_term(Parser* parser) {
             queue_pop(parser->queue, &parser->currentToken);
         } else {
             log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
-                (size_t) vector_get(parser->line_offsets, parser->currentToken->line - 1),
+                (size_t) vector_get(parser->line_offsets, parser->currentToken->line),
                 "['%s'] : Expected token > '%s', instead received > '%s'", token_type_to_string(TOKEN_TYPE_ID),
                 token_type_to_string(parser->currentToken->type)
             );

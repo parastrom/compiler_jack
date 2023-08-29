@@ -25,6 +25,7 @@ extern Arena* loggerArena;
 void log_message(LogLevel level, ErrorCode code, const char* format, ...);
 char* get_line_from_file(const char* filepath, size_t byte_offset, Arena* arena);
 const char* get_filename_from_path(const char* filepath);
+void log_error_internal(ErrorPhase phase, ErrorCode code, const char* filepath, int line, size_t byte_offset, char* format, ...);
 void close_log_file();
 void initialize_logger_arena();
 void destroy_logger_arena();

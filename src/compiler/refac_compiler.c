@@ -146,6 +146,21 @@ int compile(CompilerState *state) {
   log_message(LOG_LEVEL_INFO, ERROR_NONE, "Finished building\n");
   visitor->phase = ANALYZE;
   ast_node_accept(visitor, program_node);
+  visitor->phase = GENERATE;
+
+  for(int i = 0 ; i < state->num_of_files; ++i) {
+      ASTNode* class_node = vector_get(program_node->data.program->classes, i);
+      visitor->vmFile =fopen((char*) vector_get(state->jack_vm_files, i), "w");
+      if (visitor->vmFile == NULL) {
+          log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_FILE_OPEN, __FILE__, __LINE__,
+                            "['%s'] : Failed to open/create VM file > '%s'", __func__,
+                            (char*) vector_get(state->jack_vm_files, i));
+      }
+      ast_node_accept(visitor, class_node);
+
+      fclose((visitor->vmFile));
+  }
+
 
   print_all_errors();
   print_error_summary();

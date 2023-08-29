@@ -243,7 +243,7 @@ void create_token(Lexer *lexer, int old_state, size_t token_start, size_t token_
  */
 ErrorCode process_input(Lexer *lexer) {
     int state = START;
-    int line = 1;
+    int line = 0;
     size_t token_start = 0;
     bool in_comment = false;
     int old_state = START;

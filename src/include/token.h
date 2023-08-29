@@ -86,7 +86,7 @@ TokenType token_type_from_char(char ch);
 
 TokenCategory get_token_category(TokenType type);
 bool is_token_category(TokenType type, TokenCategory category);
-const char* category_to_string(TokenCategory category);
+const char* token_category_to_string(TokenCategory category);
 Token *new_token(const char* filename, TokenType type, char *lx, int line, Arena* arena);
 void destroy_token(Token *token);
 

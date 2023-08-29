@@ -3,6 +3,24 @@
 
 #include "symbol.h"
 
+
+#define PATH_TO_WR_DEF_FILE TOSTRING(DEF_FILES_DIR/writer.def)
+
+#define SEGMENT(seg, string) seg,
+#define SEGMENT_ENUM
+typedef enum {
+#include PATH_TO_WR_DEF_FILE
+}Segment;
+#undef SEGMENT_ENUM
+
+#define COMMAND(com, string, char_repr) com,
+#define COMMAND_ENUM
+typedef enum {
+#include PATH_TO_WR_DEF_FILE
+} Command;
+#undef COMMAND_ENUM
+
+
 typedef struct ASTNode ASTNode;
 
 /*
@@ -109,6 +127,8 @@ typedef struct SubroutineCallNode SubroutineCallNode;
 
 typedef struct SemanticAnalyzer SemanticAnalyzer;
 typedef struct SymbolTableBuilder SymbolTableBuilder;
+typedef struct CodeGenerator CodeGenerator;
+typedef struct LabelCounter LabelCounter;
 
 
 typedef enum {
@@ -172,9 +192,12 @@ typedef enum {
 typedef struct {
     SemanticAnalyzer* semanticAnalyzer;
     SymbolTableBuilder* symbolTableBuilder;
+    CodeGenerator* generator;
     SymbolTable* currentTable;
+    FILE* vmFile;
     Phase phase;
     char* currentClassName;
+    vector labelCounters;
     Arena* arena;
 } ASTVisitor;
 
@@ -207,6 +230,26 @@ struct SemanticAnalyzer {
     void (*analyze_term_node)(ASTVisitor*, ASTNode*);
     void (*analyze_operation_node)(ASTVisitor*, ASTNode*);
     void (*analyze_var_term_node)(ASTVisitor*, ASTNode*);
+};
+
+struct CodeGenerator {
+    void(*generate_program_node)(ASTVisitor*, ASTNode*);
+    void(*generate_class_node)(ASTVisitor*, ASTNode*);
+    void(*generate_class_var_dec_node)(ASTVisitor*, ASTNode*);
+    void(*generate_sub_dec_node)(ASTVisitor*, ASTNode*);
+    void(*generate_param_list_node)(ASTVisitor*, ASTNode*);
+    void(*generate_sub_body_node)(ASTVisitor*, ASTNode*);
+    void(*generate_stmts_node)(ASTVisitor*, ASTNode*);
+    void(*generate_stmt_node)(ASTVisitor*, ASTNode*);
+    void(*generate_let_node)(ASTVisitor*, ASTNode*);
+    void(*generate_if_node)(ASTVisitor*, ASTNode*);
+    void(*generate_while_node)(ASTVisitor*, ASTNode*);
+    void(*generate_do_node)(ASTVisitor*, ASTNode*);
+    void(*generate_return_node)(ASTVisitor*, ASTNode*);
+    void(*generate_sub_call_node)(ASTVisitor*, ASTNode*);
+    void(*generate_expression_node)(ASTVisitor*, ASTNode*);
+    void(*generate_term_node)(ASTVisitor*, ASTNode*);
+    void(*generate_var_tem_node)(ASTVisitor*, ASTNode*);
 };
 
 struct ProgramNode
@@ -381,11 +424,12 @@ struct TermNode
 
 ASTNode* init_ast_node(ASTNodeType type, Arena* arena);
 ASTVisitor* init_ast_visitor(Arena* arena, Phase initialPhase, SymbolTable* globalTable);
-void visit_ast_node(ASTVisitor* visitor, ASTNode* node);
 void ast_node_accept(ASTVisitor *visitor, ASTNode *node);
 
 void execute_build_function(ASTVisitor* visitor, ASTNode* node);
 void execute_analyze_function(ASTVisitor* visitor, ASTNode* node);
+void execute_generator_function(ASTVisitor* visitor, ASTNode* node);
+
 void push_table(ASTVisitor* visitor, SymbolTable* table);
 void pop_table(ASTVisitor* visitor);
 
@@ -396,11 +440,15 @@ void build_subroutine_dec_node(ASTVisitor* visitor, ASTNode* node);
 void build_parameter_list_node(ASTVisitor* visitor, ASTNode* node);
 void build_subroutine_body_node(ASTVisitor* visitor, ASTNode* node);
 void build_var_dec_node(ASTVisitor* visitor, ASTNode* node);
+
+
 bool type_arithmetic_compat(Type* type1, Type* type2);
 bool type_comparison_compat(Type* type1, Type* type2);
 bool type_is_boolean(Type* type);
 bool type_is_valid(ASTVisitor* visitor, Type* type);
 bool types_are_equal(Type* type1, Type* type2);
+
+
 void analyze_program_node(ASTVisitor* visitor, ASTNode* node);
 void analyze_class_node(ASTVisitor* visitor, ASTNode* node);
 void analyze_class_var_dec_node(ASTVisitor* visitor, ASTNode* node);
@@ -422,5 +470,36 @@ void analyze_var_term_node(ASTVisitor* visitor, ASTNode* node);
 void analyze_unary_op_node(ASTVisitor* visitor, ASTNode* node);
 void analyze_array_access_node(ASTVisitor* visitor, ASTNode* node);
 
+void generate_program_node(ASTVisitor* visitor, ASTNode* node);
+void generate_class_node(ASTVisitor* visitor, ASTNode* node);
+void generate_class_var_dec_node(ASTVisitor* visitor, ASTNode* node);
+void generate_sub_dec_node(ASTVisitor* visitor, ASTNode* node);
+void generate_param_list_node(ASTVisitor* visitor, ASTNode* node);
+void generate_sub_body_node(ASTVisitor* visitor, ASTNode* node);
+void generate_stmts_node(ASTVisitor* visitor, ASTNode* node);
+void generate_stmt_node(ASTVisitor* visitor, ASTNode* node);
+void generate_let_node(ASTVisitor* visitor, ASTNode* node);
+void generate_if_node(ASTVisitor* visitor, ASTNode* node);
+void generate_while_node(ASTVisitor* visitor, ASTNode* node);
+void generate_do_node(ASTVisitor* visitor, ASTNode* node);
+void generate_return_node(ASTVisitor* visitor, ASTNode* node);
+void generate_sub_call_node(ASTVisitor* visitor, ASTNode* node);
+void generate_expression_node(ASTVisitor* visitor, ASTNode* node);
+void generate_term_node(ASTVisitor* visitor, ASTNode* node);
+void generate_var_tem_node(ASTVisitor* visitor, ASTNode* node);
 
+Command symbol_to_command(char symbol);
+const char* command_to_string(Command command);
+const char* segment_to_string(Segment segment);
+Segment kind_to_segment(Kind kind);
+void write_push(FILE* fptr, Segment segment, int index);
+void write_pop(FILE* fptr, Segment segment, int index);
+void write_arithmetic(FILE* fptr, Command command);
+void write_label(FILE* fptr, char* label);
+void write_goto(FILE* fptr, char* label);
+void write_if(FILE* fptr, char* label);
+void write_call(FILE* fptr, char* name, int n_args);
+void write_function(FILE* fptr, char* name, int n_locals);
+void write_return(FILE* fptr);
+char* generate_unique_label(ASTVisitor* visitor, const char* labelPrefix);
 #endif //AST_H

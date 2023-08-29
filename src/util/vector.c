@@ -35,7 +35,7 @@ static void extend_if_necessary(vector v);
 vector vector_create() {
   // Allocate space for the vector itself, as well as its internal element 
   // storage (capacity 1 to start).
-  vector v = malloc(sizeof (vector));
+  vector v = malloc(sizeof (struct vector));
   assert(v != NULL);
   v->elems = malloc(4 * sizeof (void *));
   assert(v->elems != NULL);

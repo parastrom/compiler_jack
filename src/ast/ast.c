@@ -51,6 +51,35 @@ SymbolTableBuilder* init_symbol_table_builder(Arena* arena) {
     return builder;
 }
 
+CodeGenerator* init_code_gen(Arena* arena) {
+    CodeGenerator* generator = arena_alloc(arena, sizeof(CodeGenerator));
+    if (!generator) {
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to allocate memory for CodeGenerator", __func__);
+        return NULL;
+    }
+
+    generator->generate_program_node = &generate_program_node;
+    generator->generate_class_node = &generate_class_node;
+    generator->generate_class_var_dec_node = &generate_class_var_dec_node;
+    generator->generate_sub_dec_node = &generate_sub_dec_node;
+    generator->generate_param_list_node = &generate_param_list_node;
+    generator->generate_sub_body_node = &generate_sub_body_node;
+    generator->generate_stmts_node = &generate_stmts_node;
+    generator->generate_stmt_node = &generate_stmt_node;
+    generator->generate_let_node = &generate_let_node;
+    generator->generate_if_node = &generate_if_node;
+    generator->generate_while_node = &generate_while_node;
+    generator->generate_do_node = &generate_do_node;
+    generator->generate_return_node = &generate_return_node;
+    generator->generate_sub_call_node = & generate_sub_call_node;
+    generator->generate_expression_node = &generate_expression_node;
+    generator->generate_term_node = &generate_term_node;
+    generator->generate_var_tem_node = &generate_var_tem_node;
+
+    return generator;
+}
+
 
 ASTVisitor* init_ast_visitor(Arena* arena, Phase initialPhase, SymbolTable* globalTable) {
     ASTVisitor* visitor = arena_alloc(arena, sizeof(ASTVisitor));
@@ -62,11 +91,14 @@ ASTVisitor* init_ast_visitor(Arena* arena, Phase initialPhase, SymbolTable* glob
 
     visitor->semanticAnalyzer = init_semantic_analyzer(arena);
     visitor->symbolTableBuilder = init_symbol_table_builder(arena);
+    visitor->generator = init_code_gen(arena);
 
     visitor->currentTable = globalTable;
     visitor->phase = initialPhase;
     visitor->currentClassName = NULL;
+    visitor->vmFile = NULL;
     visitor->arena = arena;
+    visitor->labelCounters = vector_create();
 
     return visitor;
 }
@@ -207,7 +239,6 @@ void execute_build_function(ASTVisitor* visitor, ASTNode* node) {
     } else {
         log_message(LOG_LEVEL_WARNING, ERROR_NONE,__FILE__, __LINE__, "Unsupported node type for building");
     }
-
 }
 
 void execute_analyze_function(ASTVisitor* visitor, ASTNode* node) {
@@ -239,6 +270,35 @@ void execute_analyze_function(ASTVisitor* visitor, ASTNode* node) {
     }
 }
 
+void execute_generator_function(ASTVisitor* visitor, ASTNode* node) {
+    typedef void (*GenFunc)(ASTVisitor*, ASTNode*);
+    GenFunc genFunctions[] = {
+         [NODE_PROGRAM] = visitor->generator->generate_program_node,
+         [NODE_CLASS] = visitor->generator->generate_class_node,
+         [NODE_CLASS_VAR_DEC] = visitor->generator->generate_class_var_dec_node,
+         [NODE_SUBROUTINE_DEC] = visitor->generator->generate_sub_dec_node,
+         [NODE_PARAMETER_LIST] = visitor->generator->generate_param_list_node,
+         [NODE_SUBROUTINE_BODY] = visitor->generator->generate_sub_body_node,
+         [NODE_STATEMENTS] = visitor->generator->generate_stmts_node,
+         [NODE_STATEMENT] = visitor->generator->generate_stmt_node,
+         [NODE_LET_STATEMENT] = visitor->generator->generate_let_node,
+         [NODE_IF_STATEMENT] = visitor->generator->generate_if_node,
+         [NODE_WHILE_STATEMENT] = visitor->generator->generate_while_node,
+         [NODE_DO_STATEMENT] = visitor->generator->generate_do_node,
+         [NODE_RETURN_STATEMENT] = visitor->generator->generate_return_node,
+         [NODE_SUBROUTINE_CALL] = visitor->generator->generate_sub_call_node,
+         [NODE_EXPRESSION] = visitor->generator->generate_expression_node,
+         [NODE_TERM] = visitor->generator->generate_term_node,
+         [NODE_VAR_TERM] = visitor->generator->generate_var_tem_node,
+     };
+     if(node->nodeType < sizeof(genFunctions)/sizeof(GenFunc) && genFunctions[node->nodeType]) {
+        genFunctions[node->nodeType](visitor, node);
+    } else {
+         log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_UNKNOWN_NODE_TYPE, __FILE__, __LINE__,
+                            "['%s'] : Unsupported node type for code generation", __func__);
+    }
+}
+
 void ast_node_accept(ASTVisitor *visitor, ASTNode *node) {
     if (!visitor || !node) {
         log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_NULL_POINTER, __FILE__, __LINE__,
@@ -251,6 +311,9 @@ void ast_node_accept(ASTVisitor *visitor, ASTNode *node) {
             break;
         case ANALYZE:
             execute_analyze_function(visitor, node);
+            break;
+        case GENERATE:
+            execute_generator_function(visitor, node);
             break;
         default:
             log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_INVALID_INPUT, __FILE__, __LINE__,
@@ -551,17 +614,14 @@ void analyze_if_statement_node(ASTVisitor* visitor, ASTNode* node) {
 void analyze_while_statement_node(ASTVisitor* visitor, ASTNode* node) {
     WhileStatementNode* whileStmtNode = node->data.whileStatement;
 
-    // Analyze the condition expression
     ast_node_accept(visitor, whileStmtNode->condition);
     Type* conditionType = whileStmtNode->condition->data.expression->type;
 
-    // Ensure the condition evaluates to a boolean
     if (conditionType->basicType != TYPE_BOOLEAN) {
         log_error_with_offset(ERROR_PHASE_SEMANTIC, ERROR_SEMANTIC_INVALID_TYPE, node->filename, node->line,
                               node->byte_offset, "['%s'] : Condition must evaluate to a bool", __func__);
     }
 
-    // Recursively analyze the statements inside the 'while' block
     ast_node_accept(visitor, whileStmtNode->body);
 }
 
@@ -780,7 +840,6 @@ void analyze_subroutine_call_node(ASTVisitor* visitor, ASTNode* node){
     Symbol* subSymbol = NULL;
 
     if (subCall->caller) {
-        // First, attempt to treat the caller as a class or object name.
         Symbol* callerSymbol = symbol_table_lookup(visitor->currentTable, subCall->caller, LOOKUP_GLOBAL);
 
         // If it's not a global, it might be an object in the class scope.
@@ -909,4 +968,310 @@ void analyze_array_access_node(ASTVisitor* visitor, ASTNode* node) {
     node->data.term->data.arrayAccess.type = arrSymbol->type;
 
     // TODO - check whether index is valid
+}
+
+void generate_program_node(ASTVisitor* visitor, ASTNode* node) {
+
+}
+void generate_class_node(ASTVisitor* visitor, ASTNode* node) {
+    visitor->currentClassName = node->data.classDec->className;
+
+    Symbol* classSymbol = symbol_table_lookup(visitor->currentTable, node->data.classDec->className
+                                                , LOOKUP_LOCAL);
+    if (!classSymbol || classSymbol->kind != KIND_CLASS) {
+        log_error_with_offset(ERROR_PHASE_CODEGEN,ERROR_SEMANTIC_INVALID_KIND , node->filename, node->line,
+                              node->byte_offset, "['%s'] : Undefined class >  '%s'", __func__, node->data.classDec->className );
+    }
+
+    push_table(visitor, classSymbol->childTable);
+
+    for (int i = 0; i < vector_size(node->data.classDec->classVarDecs); i++) {
+        ASTNode* classVarDecNode = (ASTNode*) vector_get(node->data.classDec->classVarDecs, i);
+        ast_node_accept(visitor, classVarDecNode);
+    }
+
+    for (int i = 0; i < vector_size(node->data.classDec->subroutineDecs); i++) {
+        ASTNode* subroutineDecNode = (ASTNode*) vector_get(node->data.classDec->subroutineDecs, i);
+        ast_node_accept(visitor, subroutineDecNode);
+    }
+
+    pop_table(visitor);
+    visitor->currentClassName = NULL;
+}
+
+void generate_class_var_dec_node(ASTVisitor* visitor, ASTNode* node) {
+    (void) visitor;
+    (void) node;
+}
+
+
+void generate_sub_dec_node(ASTVisitor* visitor, ASTNode* node) {
+
+    Symbol* subSymbol = symbol_table_lookup(visitor->currentTable, node->data.subroutineDec->subroutineName, LOOKUP_LOCAL);
+    if (!subSymbol || (subSymbol->kind != KIND_METHOD && subSymbol->kind != KIND_CONSTRUCTOR && subSymbol->kind != KIND_FUNCTION)) {
+        log_error_with_offset(ERROR_PHASE_SEMANTIC,ERROR_SEMANTIC_INVALID_KIND , node->filename, node->line,
+                              node->byte_offset, "['%s'] : Undefined subroutine > '%s'", __func__, node->data.subroutineDec->subroutineName );
+        return;
+    }
+
+    char* functionLabel = arena_sprintf(visitor->arena, "%s.%s", visitor->currentClassName, node->data.subroutineDec->subroutineName);
+    vector localSymbols = get_symbols_of_kind(subSymbol->childTable, KIND_VAR);
+    int numLocals = vector_size(localSymbols);
+    write_function(visitor->vmFile, functionLabel, numLocals);
+
+    if (node->data.subroutineDec->subroutineType == CONSTRUCTOR) {
+        vector fieldSymbols = get_symbols_of_kind(subSymbol->table, KIND_FIELD);
+        int numFields = vector_size(fieldSymbols);
+        write_push(visitor->vmFile, SEG_CONST, numFields);
+        write_call(visitor->vmFile, "Memory.alloc", 1);
+        write_pop(visitor->vmFile, SEG_POINTER, 0);  // set the `this` pointer
+    }
+
+    if (node->data.subroutineDec->subroutineType == METHOD) {
+        write_push(visitor->vmFile, SEG_ARG, 0);
+        write_pop(visitor->vmFile, SEG_POINTER, 0);  // set the `this` pointer
+    }
+
+    push_table(visitor, subSymbol->childTable);
+    ast_node_accept(visitor, node->data.subroutineDec->body);
+    pop_table(visitor);
+}
+
+void generate_param_list_node(ASTVisitor* visitor, ASTNode* node) {
+
+    (void) visitor;
+    (void) node;
+}
+
+void generate_sub_body_node(ASTVisitor* visitor, ASTNode* node) {
+    ast_node_accept(visitor, node->data.subroutineBody->statements);
+}
+void generate_stmts_node(ASTVisitor* visitor, ASTNode* node) {
+    for(int i = 0; i < vector_size(node->data.statements->statements); i++) {
+        ASTNode* stmtNode = (ASTNode*) vector_get(node->data.statements->statements, i);
+        ast_node_accept(visitor, stmtNode);
+    }
+}
+void generate_stmt_node(ASTVisitor* visitor, ASTNode* node) {
+    switch (node->data.statement->statementType) {
+        case LET:
+            ast_node_accept(visitor, node->data.statement->data.letStatement);
+            break;
+        case IF:
+            ast_node_accept(visitor, node->data.statement->data.ifStatement);
+            break;
+        case WHILE:
+            ast_node_accept(visitor, node->data.statement->data.whileStatement);
+            break;
+        case DO:
+            ast_node_accept(visitor, node->data.statement->data.doStatement);
+            break;
+        case RETURN:
+            ast_node_accept(visitor, node->data.statement->data.returnStatement);
+            break;
+        default:
+            log_error_with_offset(ERROR_PHASE_SEMANTIC,ERROR_SEMANTIC_INVALID_STATEMENT , node->filename, node->line,
+                              node->byte_offset, "['%s'] : Invalid statement", __func__);
+    }
+}
+
+void generate_let_node(ASTVisitor* visitor, ASTNode* node) {
+    LetStatementNode* letStmtNode = node->data.letStatement;
+    Symbol* varSymbol = symbol_table_lookup(visitor->currentTable, letStmtNode->varName, LOOKUP_CLASS);
+
+    ast_node_accept(visitor, letStmtNode->rightExpression);
+
+    if(letStmtNode->indexExpression) {
+        ast_node_accept(visitor, letStmtNode->indexExpression);
+
+        write_push(visitor->vmFile, kind_to_segment(varSymbol->kind), varSymbol->index);
+        write_arithmetic(visitor->vmFile, COM_ADD);
+
+        write_pop(visitor->vmFile, SEG_TEMP, 0);
+        write_pop(visitor->vmFile, SEG_POINTER, 1);
+        write_push(visitor->vmFile, SEG_TEMP, 0);
+        write_pop(visitor->vmFile, SEG_THAT, 0);
+    } else {
+        write_pop(visitor->vmFile, kind_to_segment(varSymbol->kind), varSymbol->index);
+    }
+}
+
+void generate_if_node(ASTVisitor* visitor, ASTNode* node) {
+    char* trueLabel = generate_unique_label(visitor, "IF_TRUE");
+    char* falseLabel = generate_unique_label(visitor, "IF_FALSE");
+    char* endLabel = generate_unique_label(visitor, "IF_END");
+
+    // Generate code for the condition expression
+    ast_node_accept(visitor, node->data.ifStatement->condition);
+
+    write_arithmetic(visitor->vmFile, COM_NOT);
+    write_if(visitor->vmFile, falseLabel);
+
+    // IF true part
+    write_label(visitor->vmFile, trueLabel);
+    ast_node_accept(visitor, node->data.ifStatement->ifBranch);
+    write_goto(visitor->vmFile, endLabel);
+
+    // IF false part (if exists)
+    write_label(visitor->vmFile, falseLabel);
+    if (node->data.ifStatement->elseBranch) {
+        ast_node_accept(visitor, node->data.ifStatement->elseBranch);
+    }
+
+    write_label(visitor->vmFile, endLabel);
+}
+
+void generate_while_node(ASTVisitor* visitor, ASTNode* node) {
+    char* loopStartLabel = generate_unique_label(visitor, "WHILE_START");
+    char* loopEndLabel = generate_unique_label(visitor, "WHILE_END");
+
+    write_label(visitor->vmFile, loopStartLabel);
+    ast_node_accept(visitor, node->data.whileStatement->condition);
+    write_arithmetic(visitor->vmFile, COM_NOT);
+    write_if(visitor->vmFile, loopEndLabel);
+
+    ast_node_accept(visitor, node->data.whileStatement->body);
+    write_goto(visitor->vmFile, loopStartLabel);
+    write_label(visitor->vmFile, loopEndLabel);
+}
+
+void generate_do_node(ASTVisitor* visitor, ASTNode* node) {
+
+    ast_node_accept(visitor, node->data.doStatement->subroutineCall);
+
+    write_pop(visitor->vmFile, SEG_TEMP, 0);
+
+}
+void generate_return_node(ASTVisitor* visitor, ASTNode* node) {
+
+    if (node->data.returnStatement->expression) {
+        ast_node_accept(visitor, node->data.returnStatement->expression);
+    } else {
+        write_push(visitor->vmFile, SEG_CONST, 0);
+    }
+
+    write_return(visitor->vmFile);
+}
+
+void generate_sub_call_node(ASTVisitor* visitor, ASTNode* node) {
+    SubroutineCallNode* subCall = node->data.subroutineCall;
+    int nArgs = vector_size(subCall->arguments);
+
+    if (subCall->caller) {
+         Symbol* callerSymbol = symbol_table_lookup(visitor->currentTable, subCall->caller, LOOKUP_GLOBAL);
+         if(!callerSymbol) {
+             //Error handled during analysis phase
+             return;
+         }
+         if (callerSymbol->kind == KIND_VAR) {
+             write_push(visitor->vmFile, kind_to_segment(callerSymbol->kind), callerSymbol->index);
+             nArgs++;
+         }
+    }
+
+    for (int i = 0; i < vector_size(subCall->arguments); i++) {
+        ASTNode* arg = vector_get(subCall->arguments, i);
+        ast_node_accept(visitor, arg);
+    }
+
+    char* callName;
+    if (subCall->caller) {
+        callName = arena_sprintf(visitor->arena, "%s.%s", subCall->caller, subCall->subroutineName);
+    } else {
+        callName = arena_sprintf(visitor->arena, "%s.%s", visitor->currentClassName, subCall->subroutineName);
+    }
+
+    write_call(visitor->vmFile, callName, nArgs);
+
+}
+void generate_expression_node(ASTVisitor* visitor, ASTNode* node) {
+
+    ast_node_accept(visitor, node->data.expression->term);
+
+    for (int i = 0; i < vector_size(node->data.expression->operations); ++i) {
+
+        ASTNode* opNode = (ASTNode*) vector_get((node->data.expression->operations), i);
+        ast_node_accept(visitor, opNode->data.operation->term);
+
+        char op = opNode->data.operation->op;
+        switch (op) {
+            case '+': write_arithmetic(visitor->vmFile, COM_ADD); break;
+            case '-': write_arithmetic(visitor->vmFile, COM_SUB); break;
+            case '*': write_call(visitor->vmFile, "Math.multiply", 2); break;
+            case '/': write_call(visitor->vmFile, "Math.divide", 2); break;
+            case '&': write_arithmetic(visitor->vmFile, COM_AND); break;
+            case '|': write_arithmetic(visitor->vmFile, COM_OR); break;
+            case '<': write_arithmetic(visitor->vmFile, COM_LT); break;
+            case '>': write_arithmetic(visitor->vmFile, COM_GT); break;
+            case '=': write_arithmetic(visitor->vmFile, COM_EQ); break;
+            default: break;
+        }
+    }
+
+}
+void generate_term_node(ASTVisitor* visitor, ASTNode* node) {
+    TermNode* termNode = node->data.term;
+    switch (termNode->termType) {
+        case INTEGER_CONSTANT:
+            write_push(visitor->vmFile, SEG_CONST, termNode->data.intValue);
+            break;
+        case STRING_CONSTANT:
+            {
+                char* str = termNode->data.stringValue;
+                int len = strlen(str);
+                write_push(visitor->vmFile, SEG_CONST, len);
+                write_call(visitor->vmFile, "String.new", 1);
+                for(int i = 0; i < len; i++) {
+                    write_push(visitor->vmFile, SEG_CONST, str[i]);
+                    write_call(visitor->vmFile, "String.appendChar", 2);
+                }
+            }
+            break;
+        case KEYWORD_CONSTANT:
+            // True -> -1, else 0
+            write_push(visitor->vmFile, SEG_CONST, (strcmp(termNode->data.keywordValue, "true") == 0) ? -1 : 0);
+            if (strcmp(termNode->data.keywordValue, "this") == 0) {
+                write_pop(visitor->vmFile, SEG_POINTER, 0);
+            }
+            break;
+        case VAR_TERM:
+            {
+                Symbol* varSymbol = symbol_table_lookup(visitor->currentTable, termNode->data.varTerm->data.varTerm->varName, LOOKUP_CLASS);
+                write_push(visitor->vmFile, kind_to_segment(varSymbol->kind), varSymbol->index);
+            }
+            break;
+        case SUBROUTINE_CALL:
+            ast_node_accept(visitor, termNode->data.subroutineCall);
+            break;
+        case EXPRESSION:
+            ast_node_accept(visitor, termNode->data.expression);
+            break;
+        case UNARY_OP:
+            ast_node_accept(visitor, termNode->data.unaryOp.term);
+            char op = termNode->data.unaryOp.unaryOp;
+            if (op == '-') {
+                write_arithmetic(visitor->vmFile, COM_NEG);
+            } else if (op == '~') {
+                write_arithmetic(visitor->vmFile, COM_NOT);
+            }
+            break;
+        case ARRAY_ACCESS:
+            {
+                Symbol* arrSymbol = symbol_table_lookup(visitor->currentTable, termNode->data.arrayAccess.arrayName, LOOKUP_CLASS);
+                ast_node_accept(visitor, termNode->data.arrayAccess.index);
+                write_push(visitor->vmFile, kind_to_segment(arrSymbol->kind), arrSymbol->index);
+                write_arithmetic(visitor->vmFile, COM_ADD);
+                write_pop(visitor->vmFile, SEG_POINTER, 1);
+                write_push(visitor->vmFile, SEG_THAT, 0);
+            }
+            break;
+        default:
+            break; // Errors will be deteced during analysis
+    }
+}
+
+void generate_var_tem_node(ASTVisitor* visitor, ASTNode* node) {
+
+    (void) visitor;
+    (void) node;
 }

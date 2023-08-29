@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "logger.h"
+#include <string.h>
 
 #ifdef _WIN32
     #include <windows.h>
@@ -129,4 +130,48 @@ void destroy_arena(Arena* arena) {
         }
     #endif
     free(arena);
+}
+
+
+char* arena_sprintf(Arena* arena, const char* format, ...) {
+    va_list args;
+
+    va_start(args, format);
+    int size = vsnprintf(NULL, 0, format, args);
+    va_end(args);
+
+    if (size < 0) {
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
+                            "['%s'] : Failed to format string", __func__);
+        return NULL;
+    }
+
+    char* buffer = (char*)arena_alloc(arena, size + 1); // +1 for the null terminator
+    if (!buffer) {
+        return NULL; // arena_alloc already logs the error.
+    }
+
+    va_start(args, format);
+    vsnprintf(buffer, size + 1, format, args);
+    va_end(args);
+
+    return buffer;
+}
+
+
+char* arena_strdup(Arena* arena, const char* src) {
+    if (!src) {
+        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_NULL_POINTER, __FILE__, __LINE__,
+                            "['%s'] : Null source string provided", __func__);
+        return NULL;
+    }
+
+    size_t len = strlen(src);
+    char* buffer = (char*)arena_alloc(arena, len + 1);
+    if (!buffer) {
+        return NULL;
+    }
+
+    strcpy(buffer, src);
+    return buffer;
 }

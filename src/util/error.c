@@ -58,7 +58,7 @@ void print_error(PhasedError *error) {
 
     fprintf(stderr, "[%s][%s:%s]: ", error_severity_to_string(error->severity),
             error_phase_to_string(error->phase), error_code_to_string(error->code));
-    fprintf(stderr, "In file '%s' , line %d:\n", error->name, error->line);
+    fprintf(stderr, "In file '%s' , line %d:\n", error->name, error->line + 1);
     fprintf(stderr, "\t%s\n", error->msg);
 
     if (error->offending_code) {

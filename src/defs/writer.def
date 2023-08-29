@@ -1,0 +1,30 @@
+
+// #define SEGMENT(name, str_repr,  KIND_repr)
+#ifdef SEGMENT_ENUM
+SEGMENT(SEG_NONE, "NONE")
+SEGMENT(SEG_CONST, "constant")
+SEGMENT(SEG_ARG, "argument")
+SEGMENT(SEG_LOCAL, "local")
+SEGMENT(SEG_STATIC, "static")
+SEGMENT(SEG_THIS, "this")
+SEGMENT(SEG_THAT, "that")
+SEGMENT(SEG_POINTER, "pointer")
+SEGMENT(SEG_TEMP, "temp")
+#endif
+
+// #define COMMAND(name, str_repr, char_repr)
+#ifdef COMMAND_ENUM
+COMMAND(COM_ADD, "add", '+')
+COMMAND(COM_SUB, "sub", '-')
+COMMAND(COM_NEG, "neg", '-')
+COMMAND(COM_EQ, "eq", '=')
+COMMAND(COM_GT, "gt", '>')
+COMMAND(COM_LT, "lt", '<')
+COMMAND(COM_AND, "and", '&')
+COMMAND(COM_OR, "or", '|')
+COMMAND(COM_NOT, "not", '~')
+COMMAND(COM_NONE, "NONE", '')
+COMMAND(COM_MUL, "call Math.multiply 2", '*')
+COMMAND(COM_DIV, "call Math.divide 2", '/')
+#endif
+
