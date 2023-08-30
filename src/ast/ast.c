@@ -222,6 +222,163 @@ ASTNode* init_ast_node(ASTNodeType type, Arena* arena) {
     return node;
 }
 
+
+void destroy_ast_node(ASTNode* node) {
+    if (node != NULL) {
+        switch (node->nodeType) {
+            case NODE_PROGRAM:
+                for (int i  = 0 ; i < vector_size(node->data.program->classes); ++i) {
+                    destroy_ast_node((ASTNode*) vector_get(node->data.program->classes, i));
+                }
+                vector_destroy(node->data.program->classes);
+                break;
+            case NODE_CLASS:
+                for (int i = 0; i < vector_size(node->data.classDec->classVarDecs); ++i) {
+                    destroy_ast_node((ASTNode*)vector_get(node->data.classDec->classVarDecs, i));
+                }
+                vector_destroy(node->data.classDec->classVarDecs);
+
+                for (int i = 0; i < vector_size(node->data.classDec->subroutineDecs); ++i) {
+                    destroy_ast_node((ASTNode*)vector_get(node->data.classDec->subroutineDecs, i));
+                }
+                vector_destroy(node->data.classDec->subroutineDecs);
+                break;
+            case NODE_CLASS_VAR_DEC:
+                vector_destroy(node->data.classVarDec->varNames);
+                break;
+            case NODE_SUBROUTINE_DEC:
+                destroy_ast_node(node->data.subroutineDec->parameters);
+                destroy_ast_node(node->data.subroutineDec->body);
+                break;
+            case NODE_PARAMETER_LIST:
+                vector_destroy(node->data.parameterList->parameterTypes);
+                vector_destroy(node->data.parameterList->parameterNames);
+                break;
+            case NODE_SUBROUTINE_BODY:
+                for (int i = 0; i < vector_size(node->data.subroutineBody->varDecs); ++i) {
+                    destroy_ast_node((ASTNode*)vector_get(node->data.subroutineBody->varDecs, i));
+                }
+                vector_destroy(node->data.subroutineBody->varDecs);
+                destroy_ast_node(node->data.subroutineBody->statements);
+                break;
+            case NODE_VAR_DEC:
+                vector_destroy(node->data.varDec->varNames);
+                break;
+            case NODE_STATEMENTS:
+                for (int i = 0; i < vector_size(node->data.statements->statements); ++i) {
+                    destroy_ast_node((ASTNode*)vector_get(node->data.statements->statements, i));
+                }
+                vector_destroy(node->data.statements->statements);
+                break;
+            case NODE_STATEMENT:
+                switch (node->data.statement->statementType) {
+                    case LET:
+                        destroy_ast_node(node->data.statement->data.letStatement);
+                        break;
+                    case IF:
+                        destroy_ast_node(node->data.statement->data.ifStatement);
+                        break;
+                    case WHILE:
+                        destroy_ast_node(node->data.statement->data.whileStatement);
+                        break;
+                    case DO:
+                        destroy_ast_node(node->data.statement->data.doStatement);
+                        break;
+                    case RETURN:
+                        destroy_ast_node(node->data.statement->data.returnStatement);
+                        break;
+                    default:
+                        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_UNKNOWN_NODE_TYPE, __FILE__, __LINE__,
+                            "['%s'] : Unknown node type: %d\n", __func__, node->nodeType);
+                        break;
+                }
+                break;
+            case NODE_LET_STATEMENT:
+                destroy_ast_node(node->data.letStatement->indexExpression);
+                destroy_ast_node(node->data.letStatement->rightExpression);
+                break;
+
+            case NODE_IF_STATEMENT:
+                destroy_ast_node(node->data.ifStatement->condition);
+                destroy_ast_node(node->data.ifStatement->ifBranch);
+                destroy_ast_node(node->data.ifStatement->elseBranch);
+                break;
+
+            case NODE_WHILE_STATEMENT:
+                destroy_ast_node(node->data.whileStatement->condition);
+                destroy_ast_node(node->data.whileStatement->body);
+                break;
+
+            case NODE_DO_STATEMENT:
+                destroy_ast_node(node->data.doStatement->subroutineCall);
+                break;
+
+            case NODE_RETURN_STATEMENT:
+                destroy_ast_node(node->data.returnStatement->expression);
+                break;
+
+            case NODE_SUBROUTINE_CALL:
+                for (int i = 0; i < vector_size(node->data.subroutineCall->arguments); ++i) {
+                    destroy_ast_node((ASTNode*)vector_get(node->data.subroutineCall->arguments, i));
+                }
+                vector_destroy(node->data.subroutineCall->arguments);
+                break;
+
+            case NODE_EXPRESSION:
+                destroy_ast_node(node->data.expression->term);
+                for (int i = 0; i < vector_size(node->data.expression->operations); ++i) {
+                    destroy_ast_node((ASTNode*)vector_get(node->data.expression->operations, i));
+                }
+                vector_destroy(node->data.expression->operations);
+                break;
+
+            case NODE_TERM:
+                switch (node->data.term->termType) {
+                    case INTEGER_CONSTANT:
+                        break;
+                    case STRING_CONSTANT:
+                        // string is arena allocated
+                        break;
+                    case KEYWORD_CONSTANT:
+                       // arena allocated
+                        break;
+                    case VAR_TERM:
+                        destroy_ast_node(node->data.term->data.varTerm);
+                        break;
+                    case ARRAY_ACCESS:
+                        destroy_ast_node(node->data.term->data.arrayAccess.index);
+                        break;
+                    case SUBROUTINE_CALL:
+                        destroy_ast_node(node->data.term->data.subroutineCall);
+                        break;
+                    case EXPRESSION:
+                        destroy_ast_node(node->data.term->data.expression);
+                        break;
+                    case UNARY_OP:
+                        destroy_ast_node(node->data.term->data.unaryOp.term);
+                        break;
+                    default:
+                        log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_UNKNOWN_NODE_TYPE, __FILE__, __LINE__,
+                            "['%s'] : Unknown node type: %d\n", __func__, node->nodeType);
+                        break;
+                }
+                break;
+            case NODE_OPERATION:
+                destroy_ast_node(node->data.operation->term);
+                break;
+
+            case NODE_VAR_TERM:
+                // char* are arena allocated
+                break;
+
+            default:
+                log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_UNKNOWN_NODE_TYPE, __FILE__, __LINE__,
+                            "['%s'] : Unknown node type: %d\n", __func__, node->nodeType);
+                break;
+        }
+    }
+}
+
 void execute_build_function(ASTVisitor* visitor, ASTNode* node) {
     typedef void (*BuilderFunc)(ASTVisitor*, ASTNode*);
     BuilderFunc buildFunctions[] = {
@@ -456,6 +613,7 @@ void analyze_class_node(ASTVisitor* visitor, ASTNode* node) {
     if (!classSymbol || classSymbol->kind != KIND_CLASS) {
         log_error_with_offset(ERROR_PHASE_SEMANTIC,ERROR_SEMANTIC_INVALID_KIND , node->filename, node->line,
                               node->byte_offset, "['%s'] : Undefined class >  '%s'", __func__, node->data.classDec->className );
+        return;
     }
 
     push_table(visitor, classSymbol->childTable);
@@ -493,6 +651,7 @@ void analyze_subroutine_dec_node(ASTVisitor* visitor, ASTNode* node) {
             && subSymbol->kind != KIND_FUNCTION)) {
         log_error_with_offset(ERROR_PHASE_SEMANTIC,ERROR_SEMANTIC_INVALID_KIND , node->filename, node->line,
                               node->byte_offset, "['%s'] : Undefined subroutine > '%s'", __func__, node->data.subroutineDec->subroutineName );
+        return;
     }
 
     push_table(visitor, subSymbol->childTable);
@@ -847,6 +1006,7 @@ void analyze_subroutine_call_node(ASTVisitor* visitor, ASTNode* node){
               log_error_with_offset(ERROR_PHASE_SEMANTIC, ERROR_SEMANTIC_UNDECLARED_SYMBOL, node->filename, node->line,
                                   node->byte_offset, "['%s'] : Caller class is undeclared > '%s'",
                                   __func__, subCall->caller);
+            return;
         }
 
         SymbolTable* targetTable = NULL;
@@ -874,6 +1034,7 @@ void analyze_subroutine_call_node(ASTVisitor* visitor, ASTNode* node){
         log_error_with_offset(ERROR_PHASE_SEMANTIC, ERROR_SEMANTIC_INVALID_EXPRESSION, node->filename, node->line,
                               node->byte_offset, "['%s'] : Subroutine > '%s', has not been declared yet ",
                               __func__, subCall->subroutineName);
+        return;
     }
 
     subCall->type = subSymbol->type;
@@ -910,7 +1071,7 @@ void analyze_var_term_node(ASTVisitor* visitor, ASTNode* node) {
     if (!termSymbol) {
         log_error_with_offset(ERROR_PHASE_SEMANTIC,ERROR_SEMANTIC_UNDECLARED_SYMBOL , node->filename, node->line,
                               node->byte_offset, "['%s'] : Undefined variable >  '%s'", __func__, term->varName);
-        exit(EXIT_FAILURE);
+        return;
     }
 
     term->type = termSymbol->type;
@@ -922,7 +1083,7 @@ void analyze_var_term_node(ASTVisitor* visitor, ASTNode* node) {
             log_error_with_offset(ERROR_PHASE_SEMANTIC,ERROR_SEMANTIC_INVALID_TERM , node->filename, node->line,
                               node->byte_offset, "['%s'] : Variable > '%s', is not a valid attribute or method of class > '%s'"
                               , __func__, term->varName, term->className);
-            exit(EXIT_FAILURE);
+            return;
         }
     }
 }
@@ -947,7 +1108,6 @@ void analyze_unary_op_node(ASTVisitor* visitor, ASTNode* node) {
     } else {
         log_error_with_offset(ERROR_PHASE_SEMANTIC,ERROR_SEMANTIC_INVALID_OPERATION , node->filename, node->line,
                               node->byte_offset, "['%s'] : Invalid unary operation", __func__);
-        exit(EXIT_FAILURE);
     }
 }
 
@@ -963,6 +1123,7 @@ void analyze_array_access_node(ASTVisitor* visitor, ASTNode* node) {
         log_error_with_offset(ERROR_PHASE_SEMANTIC,ERROR_SEMANTIC_UNDECLARED_SYMBOL , node->filename, node->line,
                               node->byte_offset, "['%s'] : Array > '%s' is undeclared", __func__,
                               node->data.term->data.arrayAccess.arrayName);
+        return;
     }
 
     node->data.term->data.arrayAccess.type = arrSymbol->type;
@@ -981,6 +1142,7 @@ void generate_class_node(ASTVisitor* visitor, ASTNode* node) {
     if (!classSymbol || classSymbol->kind != KIND_CLASS) {
         log_error_with_offset(ERROR_PHASE_CODEGEN,ERROR_SEMANTIC_INVALID_KIND , node->filename, node->line,
                               node->byte_offset, "['%s'] : Undefined class >  '%s'", __func__, node->data.classDec->className );
+        return;
     }
 
     push_table(visitor, classSymbol->childTable);
@@ -1032,6 +1194,7 @@ void generate_sub_dec_node(ASTVisitor* visitor, ASTNode* node) {
         write_pop(visitor->vmFile, SEG_POINTER, 0);  // set the `this` pointer
     }
 
+    // manage scopes
     push_table(visitor, subSymbol->childTable);
     ast_node_accept(visitor, node->data.subroutineDec->body);
     pop_table(visitor);
@@ -1154,19 +1317,45 @@ void generate_return_node(ASTVisitor* visitor, ASTNode* node) {
 }
 
 void generate_sub_call_node(ASTVisitor* visitor, ASTNode* node) {
+
     SubroutineCallNode* subCall = node->data.subroutineCall;
     int nArgs = vector_size(subCall->arguments);
 
+    char* actualCaller = subCall->caller;
     if (subCall->caller) {
-         Symbol* callerSymbol = symbol_table_lookup(visitor->currentTable, subCall->caller, LOOKUP_GLOBAL);
-         if(!callerSymbol) {
-             //Error handled during analysis phase
-             return;
-         }
-         if (callerSymbol->kind == KIND_VAR) {
-             write_push(visitor->vmFile, kind_to_segment(callerSymbol->kind), callerSymbol->index);
-             nArgs++;
-         }
+        Symbol* callerSymbol = symbol_table_lookup(visitor->currentTable, subCall->caller, LOOKUP_GLOBAL);
+        if (!callerSymbol) {
+            //Error handled during analysis phase
+            return;
+        }
+
+        SymbolTable* targetTable = NULL;
+        if (callerSymbol->kind == KIND_CLASS) {
+            targetTable = callerSymbol->childTable;
+        } else if (callerSymbol->type) {
+            Symbol* typeSymbol = symbol_table_lookup(visitor->currentTable, callerSymbol->type->userDefinedType, LOOKUP_GLOBAL);
+            if (typeSymbol) {
+                targetTable = typeSymbol->childTable;
+            }
+        }
+
+        // Look up the subroutine in the determined symbol table.
+        Symbol* subroutineSymbol = NULL;
+        if (targetTable) {
+            subroutineSymbol = symbol_table_lookup(targetTable, subCall->subroutineName, LOOKUP_LOCAL);
+        }
+
+        if (!subroutineSymbol) {
+            // Error: subroutine not found
+            return;
+        }
+
+        if ((callerSymbol->kind == KIND_VAR || callerSymbol->kind == KIND_FIELD || callerSymbol->kind == KIND_ARG)
+            && subroutineSymbol->kind == KIND_METHOD) {
+            write_push(visitor->vmFile, kind_to_segment(callerSymbol->kind), callerSymbol->index);
+            nArgs++;
+            actualCaller = callerSymbol->type->userDefinedType;
+        }
     }
 
     for (int i = 0; i < vector_size(subCall->arguments); i++) {
@@ -1175,12 +1364,15 @@ void generate_sub_call_node(ASTVisitor* visitor, ASTNode* node) {
     }
 
     char* callName;
-    if (subCall->caller) {
-        callName = arena_sprintf(visitor->arena, "%s.%s", subCall->caller, subCall->subroutineName);
+    if (actualCaller) {
+        callName = arena_sprintf(visitor->arena, "%s.%s", actualCaller, subCall->subroutineName);
     } else {
         callName = arena_sprintf(visitor->arena, "%s.%s", visitor->currentClassName, subCall->subroutineName);
     }
 
+    if(strcmp(node->filename, "/home/tomisin/Projects/compiler/src/jack_files/Pong/PongGame.jack") == 0) {
+        log_message(LOG_LEVEL_INFO, ERROR_NONE, "['%s'] : call name > %s\n" , __func__, callName);
+    }
     write_call(visitor->vmFile, callName, nArgs);
 
 }

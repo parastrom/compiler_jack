@@ -47,9 +47,6 @@ typedef struct {
     char* suggestion;
 } PhasedError;
 
-
-Error get_error(void);
-
 const char* error_code_to_string(ErrorCode code);
 const char* error_code_to_suggestion(ErrorCode code);
 const char *error_phase_to_string(ErrorPhase phase);
@@ -64,6 +61,5 @@ void print_error(PhasedError *error);
 void print_all_errors();
 void print_error_summary();
 void destroy_error_vector();
-void set_error(Error error);
 
 #endif // ERROR_H

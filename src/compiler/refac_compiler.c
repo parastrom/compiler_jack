@@ -10,7 +10,7 @@
 #include <string.h>
 
 CompilerState *init_compiler() {
-  Arena *arena = init_arena(64);
+  Arena *arena = init_arena(128);
   CompilerState *state = arena_alloc(arena, sizeof(CompilerState));
   state->jack_files = vector_create();
   state->jack_vm_files = vector_create();
@@ -139,6 +139,7 @@ int compile(CompilerState *state) {
 
     destroy_lexer(lexer);
     destroy_arena(fileArena);
+    destroy_parser(parser);
   }
 
   ASTVisitor *visitor = init_ast_visitor(state->arena, BUILD, state->global_table);
@@ -146,25 +147,29 @@ int compile(CompilerState *state) {
   log_message(LOG_LEVEL_INFO, ERROR_NONE, "Finished building\n");
   visitor->phase = ANALYZE;
   ast_node_accept(visitor, program_node);
-  visitor->phase = GENERATE;
 
-  for(int i = 0 ; i < state->num_of_files; ++i) {
-      ASTNode* class_node = vector_get(program_node->data.program->classes, i);
-      visitor->vmFile =fopen((char*) vector_get(state->jack_vm_files, i), "w");
-      if (visitor->vmFile == NULL) {
-          log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_FILE_OPEN, __FILE__, __LINE__,
-                            "['%s'] : Failed to open/create VM file > '%s'", __func__,
-                            (char*) vector_get(state->jack_vm_files, i));
+  if(error_count() == 0) {
+      visitor->phase = GENERATE;
+
+      for(int i = 0 ; i < state->num_of_files; ++i) {
+          ASTNode* class_node = vector_get(program_node->data.program->classes, i);
+          visitor->vmFile =fopen((char*) vector_get(state->jack_vm_files, i), "w");
+          if (visitor->vmFile == NULL) {
+              log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_FILE_OPEN, __FILE__, __LINE__,"['%s'] : Failed to open/create VM file > '%s'", __func__,(char*) vector_get(state->jack_vm_files, i));
+          }
+          ast_node_accept(visitor, class_node);
+          fclose((visitor->vmFile));
       }
-      ast_node_accept(visitor, class_node);
-
-      fclose((visitor->vmFile));
   }
 
+  //
 
   print_all_errors();
   print_error_summary();
 
+  // clean up
+  close_log_file();
+  destroy_ast_node(program_node);
   destroy_arena(state->arena);
 
   return 1;

@@ -34,6 +34,16 @@ Parser* init_parser(TokenQueue* queue, vector line_offsets, Arena* arena) {
     return parser;
 }
 
+void destroy_parser(Parser* parser) {
+
+    /*
+     *  parser->arena will live longer than the parser
+     *  parser->currentToken - pointer into a element from the queue // does not need to be manually freed
+     *  parser itself arena allocated dies when arena is destroyed
+     */
+     vector_destroy(parser->line_offsets);
+}
+
 void expect_and_consume(Parser* parser, TokenType expected) {
     if (parser->currentToken->type != expected) {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
@@ -53,13 +63,13 @@ ASTNode* parse_class(Parser* parser) {
     log_message(LOG_LEVEL_DEBUG, ERROR_NONE, "Parsing class\n");
 
     queue_pop(parser->queue, &parser->currentToken);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, parser->currentToken->line);
     expect_and_consume(parser, TOKEN_TYPE_CLASS);
 
     if (parser->currentToken->type == TOKEN_TYPE_ID) {
-        node->data.classDec->className = strdup(parser->currentToken->lx);
+        node->data.classDec->className = arena_strdup(parser->arena,parser->currentToken->lx);
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
@@ -101,7 +111,7 @@ ASTNode* parse_class(Parser* parser) {
 ASTNode* parse_class_var_dec(Parser* parser) {
 
     ASTNode* node = init_ast_node(NODE_CLASS_VAR_DEC, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
 
@@ -128,7 +138,7 @@ ASTNode* parse_class_var_dec(Parser* parser) {
 
     // Parse the variable type
     if (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_TYPE)) {
-        node->data.classVarDec->varType = strdup(parser->currentToken->lx);
+        node->data.classVarDec->varType = arena_strdup(parser->arena,parser->currentToken->lx);
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
@@ -142,7 +152,7 @@ ASTNode* parse_class_var_dec(Parser* parser) {
 
     // Parse the first variable name
     if (parser->currentToken->type == TOKEN_TYPE_ID) {
-        vector_push(node->data.classVarDec->varNames, strdup(parser->currentToken->lx));
+        vector_push(node->data.classVarDec->varNames, arena_strdup(parser->arena,parser->currentToken->lx));
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
@@ -158,7 +168,7 @@ ASTNode* parse_class_var_dec(Parser* parser) {
     while (parser->currentToken->type == TOKEN_TYPE_COMMA) {
         queue_pop(parser->queue, &parser->currentToken);
         if (parser->currentToken->type == TOKEN_TYPE_ID) {
-            vector_push(node->data.classVarDec->varNames, strdup(parser->currentToken->lx));
+            vector_push(node->data.classVarDec->varNames, arena_strdup(parser->arena,parser->currentToken->lx));
             queue_pop(parser->queue, &parser->currentToken);
         } else {
             log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
@@ -178,7 +188,7 @@ ASTNode* parse_class_var_dec(Parser* parser) {
 ASTNode* parse_subroutine_dec(Parser* parser) {
     
     ASTNode* node = init_ast_node(NODE_SUBROUTINE_DEC, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
     log_message(LOG_LEVEL_DEBUG,ERROR_NONE, "Parsing subroutine declaration. Current Token : %s, Line : %d\n",
@@ -206,7 +216,7 @@ ASTNode* parse_subroutine_dec(Parser* parser) {
 
     // Parse the return type
     if (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_TYPE)) {
-        node->data.subroutineDec->returnType = strdup(parser->currentToken->lx);
+        node->data.subroutineDec->returnType = arena_strdup(parser->arena,parser->currentToken->lx);
         queue_pop(parser->queue, &parser->currentToken);
     }else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
@@ -219,7 +229,7 @@ ASTNode* parse_subroutine_dec(Parser* parser) {
     }
     // Parse the subroutine name
     if (parser->currentToken->type == TOKEN_TYPE_ID) {
-        node->data.subroutineDec->subroutineName = strdup(parser->currentToken->lx);
+        node->data.subroutineDec->subroutineName = arena_strdup(parser->arena,parser->currentToken->lx);
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
@@ -241,7 +251,7 @@ ASTNode* parse_subroutine_dec(Parser* parser) {
 ASTNode* parse_parameter_list(Parser* parser) {
 
     ASTNode* node = init_ast_node(NODE_PARAMETER_LIST, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
 
@@ -251,11 +261,11 @@ ASTNode* parse_parameter_list(Parser* parser) {
     // Parse the first parameter
     if (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_TYPE)) {
 
-        vector_push(node->data.parameterList->parameterTypes, strdup(parser->currentToken->lx));
+        vector_push(node->data.parameterList->parameterTypes, arena_strdup(parser->arena,parser->currentToken->lx));
         queue_pop(parser->queue, &parser->currentToken);
 
          if (parser->currentToken->type == TOKEN_TYPE_ID) {
-            vector_push(node->data.parameterList->parameterNames, strdup(parser->currentToken->lx));
+            vector_push(node->data.parameterList->parameterNames, arena_strdup(parser->arena,parser->currentToken->lx));
             queue_pop(parser->queue, &parser->currentToken);
         } else {
              log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
@@ -270,7 +280,7 @@ ASTNode* parse_parameter_list(Parser* parser) {
         while (parser->currentToken->type == TOKEN_TYPE_COMMA) {
             queue_pop(parser->queue, &parser->currentToken);
             if (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_TYPE)) {
-                vector_push(node->data.parameterList->parameterTypes, strdup(parser->currentToken->lx));
+                vector_push(node->data.parameterList->parameterTypes, arena_strdup(parser->arena,parser->currentToken->lx));
                 queue_pop(parser->queue, &parser->currentToken);
             } else {
                 log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
@@ -282,7 +292,7 @@ ASTNode* parse_parameter_list(Parser* parser) {
                 parser->has_error = true;
             }
             if (parser->currentToken->type == TOKEN_TYPE_ID) {
-                vector_push(node->data.parameterList->parameterNames, strdup(parser->currentToken->lx));
+                vector_push(node->data.parameterList->parameterNames, arena_strdup(parser->arena,parser->currentToken->lx));
                 queue_pop(parser->queue, &parser->currentToken);
             } else {
                 log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
@@ -302,7 +312,7 @@ ASTNode* parse_parameter_list(Parser* parser) {
 ASTNode* parse_subroutine_body(Parser* parser) {
 
     ASTNode* node = init_ast_node(NODE_SUBROUTINE_BODY, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
 
@@ -328,7 +338,7 @@ ASTNode* parse_subroutine_body(Parser* parser) {
 ASTNode* parse_var_dec(Parser* parser) {
 
     ASTNode* node = init_ast_node(NODE_VAR_DEC, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
 
@@ -339,7 +349,7 @@ ASTNode* parse_var_dec(Parser* parser) {
 
     // Parse the variable type
     if (is_token_category(parser->currentToken->type, TOKEN_CATEGORY_TYPE)) {
-        node->data.varDec->varType = strdup(parser->currentToken->lx);
+        node->data.varDec->varType = arena_strdup(parser->arena,parser->currentToken->lx);
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
@@ -353,7 +363,7 @@ ASTNode* parse_var_dec(Parser* parser) {
 
     // Parse the first variable name
     if (parser->currentToken->type == TOKEN_TYPE_ID) {
-        vector_push(node->data.varDec->varNames, strdup(parser->currentToken->lx));
+        vector_push(node->data.varDec->varNames, arena_strdup(parser->arena,parser->currentToken->lx));
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
@@ -368,7 +378,7 @@ ASTNode* parse_var_dec(Parser* parser) {
     while (parser->currentToken->type == TOKEN_TYPE_COMMA) {
         queue_pop(parser->queue, &parser->currentToken);
         if (parser->currentToken->type == TOKEN_TYPE_ID) {
-            vector_push(node->data.varDec->varNames, strdup(parser->currentToken->lx));
+            vector_push(node->data.varDec->varNames, arena_strdup(parser->arena,parser->currentToken->lx));
             queue_pop(parser->queue, &parser->currentToken);
         } else {
             log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
@@ -388,7 +398,7 @@ ASTNode* parse_var_dec(Parser* parser) {
 ASTNode* parse_statements(Parser* parser) {
     
     ASTNode* node = init_ast_node(NODE_STATEMENTS, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
 
@@ -408,7 +418,7 @@ ASTNode* parse_statement(Parser* parser) {
 
 
     ASTNode* node = init_ast_node(NODE_STATEMENT, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
 
@@ -446,7 +456,7 @@ ASTNode* parse_statement(Parser* parser) {
 ASTNode* parse_let_statement(Parser* parser) {
 
     ASTNode* node = init_ast_node(NODE_LET_STATEMENT, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
 
@@ -457,7 +467,7 @@ ASTNode* parse_let_statement(Parser* parser) {
 
     // Parse the variable name
     if (parser->currentToken->type == TOKEN_TYPE_ID) {
-        node->data.letStatement->varName = strdup(parser->currentToken->lx);
+        node->data.letStatement->varName = arena_strdup(parser->arena,parser->currentToken->lx);
         queue_pop(parser->queue, &parser->currentToken);
     } else {
         log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
@@ -485,7 +495,7 @@ ASTNode* parse_let_statement(Parser* parser) {
 ASTNode* parse_if_statement(Parser* parser) {
 
     ASTNode* node = init_ast_node(NODE_IF_STATEMENT, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
 
@@ -512,7 +522,7 @@ ASTNode* parse_if_statement(Parser* parser) {
 ASTNode* parse_while_statement(Parser* parser) {
 
     ASTNode* node = init_ast_node(NODE_WHILE_STATEMENT, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
 
@@ -533,7 +543,7 @@ ASTNode* parse_while_statement(Parser* parser) {
 ASTNode* parse_do_statement(Parser* parser) {
 
     ASTNode* node = init_ast_node(NODE_DO_STATEMENT, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
 
@@ -547,7 +557,7 @@ ASTNode* parse_do_statement(Parser* parser) {
 ASTNode* parse_return_statement(Parser* parser) {
 
     ASTNode* node = init_ast_node(NODE_RETURN_STATEMENT, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
 
@@ -563,13 +573,13 @@ ASTNode* parse_return_statement(Parser* parser) {
 ASTNode* parse_subroutine_call(Parser *parser) {
 
     ASTNode* node = init_ast_node(NODE_SUBROUTINE_CALL, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
 
     // Parse the caller
     if (parser->currentToken->type == TOKEN_TYPE_ID) {
-        node->data.subroutineCall->caller = strdup(parser->currentToken->lx);
+        node->data.subroutineCall->caller = arena_strdup(parser->arena,parser->currentToken->lx);
         queue_pop(parser->queue, &parser->currentToken);
     }
 
@@ -577,7 +587,7 @@ ASTNode* parse_subroutine_call(Parser *parser) {
     if (parser->currentToken->type == TOKEN_TYPE_PERIOD) {
         queue_pop(parser->queue, &parser->currentToken);
         if (parser->currentToken->type == TOKEN_TYPE_ID) {
-            node->data.subroutineCall->subroutineName = strdup(parser->currentToken->lx);
+            node->data.subroutineCall->subroutineName = arena_strdup(parser->arena,parser->currentToken->lx);
             queue_pop(parser->queue, &parser->currentToken);
         } else {
             log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,
@@ -612,7 +622,7 @@ ASTNode* parse_subroutine_call(Parser *parser) {
 ASTNode *parse_expression(Parser *parser) {
 
     ASTNode* node = init_ast_node(NODE_EXPRESSION, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
 
@@ -636,7 +646,7 @@ ASTNode *parse_expression(Parser *parser) {
 ASTNode* parse_term(Parser* parser) {
 
     ASTNode* node = init_ast_node(NODE_TERM, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
 
@@ -653,12 +663,12 @@ ASTNode* parse_term(Parser* parser) {
     } else if (type == TOKEN_TYPE_STRING) {
         // A string constant
         node->data.term->termType = STRING_CONSTANT;
-        node->data.term->data.stringValue = strdup(parser->currentToken->lx);
+        node->data.term->data.stringValue = arena_strdup(parser->arena,parser->currentToken->lx);
         queue_pop(parser->queue, &parser->currentToken);
     } else if (type == TOKEN_TYPE_TRUE || type == TOKEN_TYPE_FALSE || type == TOKEN_TYPE_NULL || type == TOKEN_TYPE_THIS) {
         // A keyword constant
         node->data.term->termType = KEYWORD_CONSTANT;
-        node->data.term->data.keywordValue = strdup(parser->currentToken->lx);
+        node->data.term->data.keywordValue = arena_strdup(parser->arena,parser->currentToken->lx);
         queue_pop(parser->queue, &parser->currentToken);
     } else if (type == TOKEN_TYPE_ID) {
         Token* nextToken = (Token*) queue_peek(parser->queue);
@@ -666,7 +676,7 @@ ASTNode* parse_term(Parser* parser) {
         if (nextToken->type == TOKEN_TYPE_OPEN_BRACKET) {
             // It's an array access
             node->data.term->termType = ARRAY_ACCESS;
-            node->data.term->data.arrayAccess.arrayName = strdup(parser->currentToken->lx);
+            node->data.term->data.arrayAccess.arrayName = arena_strdup(parser->arena,parser->currentToken->lx);
 
             expect_and_consume(parser, TOKEN_TYPE_ID);
             expect_and_consume(parser, TOKEN_TYPE_OPEN_BRACKET);
@@ -724,13 +734,13 @@ ASTNode* parse_term(Parser* parser) {
 
 ASTNode* parse_var_term(Parser* parser) {
     ASTNode* node = init_ast_node(NODE_VAR_TERM, parser->arena);
-    node->filename = parser->currentToken->filename;
+    node->filename = arena_strdup(parser->arena, parser->currentToken->filename);
     node->line = parser->currentToken->line;
     node->byte_offset = *(size_t*)vector_get(parser->line_offsets, node->line  - 1);
 
     char* possibleClassName;
     if (parser->currentToken->type == TOKEN_TYPE_ID) {
-        possibleClassName = strdup(parser->currentToken->lx);
+        possibleClassName = arena_strdup(parser->arena,parser->currentToken->lx);
         queue_pop(parser->queue, &parser->currentToken);
     }
 
@@ -738,7 +748,7 @@ ASTNode* parse_var_term(Parser* parser) {
         node->data.varTerm->className = possibleClassName;
         queue_pop(parser->queue, &parser->currentToken);
         if (parser->currentToken->type == TOKEN_TYPE_ID) {
-            node->data.varTerm->varName = strdup(parser->currentToken->lx);
+            node->data.varTerm->varName = arena_strdup(parser->arena,parser->currentToken->lx);
             queue_pop(parser->queue, &parser->currentToken);
         } else {
             log_error_with_offset(ERROR_PHASE_PARSER, ERROR_PARSER_UNEXPECTED_TOKEN, parser->currentToken->filename, parser->currentToken->line,

@@ -425,6 +425,7 @@ struct TermNode
 ASTNode* init_ast_node(ASTNodeType type, Arena* arena);
 ASTVisitor* init_ast_visitor(Arena* arena, Phase initialPhase, SymbolTable* globalTable);
 void ast_node_accept(ASTVisitor *visitor, ASTNode *node);
+void destroy_ast_node(ASTNode* node);
 
 void execute_build_function(ASTVisitor* visitor, ASTNode* node);
 void execute_analyze_function(ASTVisitor* visitor, ASTNode* node);

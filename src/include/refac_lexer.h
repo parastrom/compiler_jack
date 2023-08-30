@@ -19,7 +19,6 @@ typedef struct
     ErrorCode error_code;
     vector line_starts;
     Arena* arena;
-    Arena* errorArena;
 } Lexer;
 
 typedef enum
@@ -46,7 +45,6 @@ typedef enum
     IN_COMMENT_SINGLE,
     IN_COMMENT_MULTI,
     SEEN_STAR_IN_COMMENT,
-    SEEN_END_QUOTE,
     IN_SYMBOL,
     IN_ERROR,
 } States;
@@ -56,5 +54,6 @@ void initialize_eq_classes();
 void destroy_lexer(Lexer *lexer);
 ErrorCode process_input(Lexer *lexer);
 char *strip(const char *str);
+void destroy_queue(TokenQueue* queue);
 
 #endif // REFAC_LEXER_H

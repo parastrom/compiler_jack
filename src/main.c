@@ -9,7 +9,6 @@
 
 int main() {
     const char* jackFilesDir = JACK_FILES_DIR;
-    printf("JACK files directory: %s\n", jackFilesDir);
 
     CompilerState* compilerState = init_compiler();
     int res = compile(compilerState);

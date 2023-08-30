@@ -245,8 +245,8 @@ Token *new_token(const char* filename, TokenType type, char *lx, int line, Arena
                             "['%s'] : Failed to allocate memory for a token", __func__);
         return NULL;
     }
-    token->filename = filename;
-    token->type = type;
+    token->filename = filename; // Points to memory from
+    token->type = type; // Pass by value - copy
     token->lx = lx; // Take ownership of the lx string
     token->line = line;
 
@@ -257,6 +257,6 @@ void destroy_token(Token *token)
 {
     if (token != NULL)
     {
-        free(token->lx); // Free the dynamically allocated memory for 'lx'
+        free(token->lx);
     }
 }

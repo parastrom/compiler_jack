@@ -150,8 +150,8 @@ void initialize_eq_classes() {
  * @param filename The name of the file to be processed by the lexer - 
  * @return A pointer to the initialized lexer.
  */
-Lexer *init_lexer(const char *filename, Arena *lexerArena) {
-    Lexer *lexer = arena_alloc(lexerArena, sizeof(Lexer));
+Lexer* init_lexer(const char *filename, Arena *lexerArena) {
+    Lexer* lexer = arena_alloc(lexerArena, sizeof(Lexer));
     if (lexer == NULL) {
         log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
                             "['%s'] : Failed to allocate memory for the lexer", __func__);
@@ -172,7 +172,7 @@ Lexer *init_lexer(const char *filename, Arena *lexerArena) {
 
     lexer->position = 0;
     lexer->queue = queue_init(lexerArena);
-    lexer->line_starts = vector_create();
+    lexer->line_starts = vector_create(); // owned by parser
     if (lexer->queue == NULL) {
         log_error_no_offset(ERROR_PHASE_INTERNAL, ERROR_MEMORY_ALLOCATION, __FILE__, __LINE__,
                             "['%s'] : Failed to allocate memory for lexer queue", __func__);
@@ -187,9 +187,8 @@ Lexer *init_lexer(const char *filename, Arena *lexerArena) {
 
 void destroy_lexer(Lexer *lexer) {
     if (lexer != NULL) {
-        if (lexer->input != NULL) {
-            free(lexer->input);
-        }
+        free(lexer->input);
+        free((char*) lexer->filename);
     }
 }
 
@@ -230,9 +229,9 @@ TokenType determine_token_type(const char *token_str, int old_state) {
  * @param token_count - The number of tokens created so far
  */
 void create_token(Lexer *lexer, int old_state, size_t token_start, size_t token_len, int line) {
-    char *token_str = strndup(lexer->input + token_start, token_len);
+    char* token_str = strndup(lexer->input + token_start, token_len);
     TokenType type = determine_token_type(token_str, old_state);
-    Token *token = new_token(lexer->filename, type, token_str, line, lexer->arena);
+    Token* token = new_token(lexer->filename, type, token_str, line, lexer->arena);
     queue_push(lexer->queue, token);
 }
 
@@ -274,7 +273,9 @@ ErrorCode process_input(Lexer *lexer) {
         if (!was_in_comment && next_state != state && !in_comment) {
             // If the old state was not START, IN_SYMBOL, or COMMENT_START, create a token
             if (state != START && state != IN_SYMBOL) {
-                create_token(lexer, state, token_start, lexer->position - token_start, line);
+                size_t adjusted_start = (state == IN_STRING && next_state == START) ? token_start + 1 : token_start;
+                size_t length = lexer->position - adjusted_start;
+                create_token(lexer, state, adjusted_start, length, line);
                 token_count++;
             }
             // Update token_start when transitioning from START state to another state
@@ -309,14 +310,13 @@ ErrorCode process_input(Lexer *lexer) {
             } else {
                 log_error_with_offset(ERROR_PHASE_LEXER, ERROR_LEXER_NEWLINE_IN_STRING, lexer->filename, line,
                                       lexer->position, "['%s'] : Illegal symbol > '%c'", __func__, c);
-                return ERROR_LEXER_ILLEGAL_SYMBOL;
+                return ERROR_LEXER_ILLEGAL_SYMBOL; // Unreachable since log_with_offset "panics"
             }
         }
 
-        // Advance lexer position
         lexer->position++;
 
-        if (c == '\0') break; // end of input
+        if (c == '\0') break; // EOF
     }
 
     log_message(LOG_LEVEL_DEBUG, ERROR_NONE, "Lexer processed %d tokens\n", token_count);

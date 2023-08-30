@@ -79,3 +79,13 @@ Token* queue_peek_offset(TokenQueue *queue, int offset) {
     return NULL;
 }
 
+
+void destroy_queue(TokenQueue* queue) {
+    if (queue != NULL) {
+        for(int i = 0; i < vector_size(queue->list); ++i) {
+            Token* tok = (Token*) vector_get(queue->list, i);
+            destroy_token(tok);
+        }
+        vector_destroy(queue->list);
+    }
+}

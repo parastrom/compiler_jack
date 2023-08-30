@@ -35,13 +35,7 @@ int warning_count() {
 }
 
 bool has_fatal_errors() {
-    for (int i = 0; i < vector_size(errorVector); i++) {
-        PhasedError *error = (PhasedError *)vector_get(errorVector, i);
-        if (error->severity == ERROR_SEV_ERROR) {  // Assuming ERROR is the enum value for fatal errors
-            return true;
-        }
-    }
-    return false;
+    return error_count() > 0;
 }
 
 void clear_errors() {
@@ -89,11 +83,9 @@ void print_error_summary() {
     fprintf(stderr, "Total Errors: %d\n", totalErrors);
     fprintf(stderr, "Total Warnings: %d\n", totalWarnings);
     if (fatal) {
-        fprintf(stderr, "Compilation terminated due to fatal errors.\n");
-    } else if (totalErrors == 0) {
-        fprintf(stderr, "Compilation successful with %d warnings.\n", totalWarnings);
+        fprintf(stderr, "Compilation terminated due to fatal errors and/or warnings.\n");
     } else {
-        fprintf(stderr, "Compilation completed with errors and warnings.\n");
+        fprintf(stderr, "Compilation was successful.\n");
     }
     fprintf(stderr, "===================================\n");
 }
@@ -157,23 +149,3 @@ void destroy_error_vector() {
 }
 
 
-void set_error(Error error) {
-    if (num_errors < MAX_ERRORS) {
-        errors[num_errors] = error;
-        num_errors++;
-    }
-}
-
-
-Error get_error(void) {
-    if (num_errors > 0) {
-        return errors[--num_errors];
-    } else {
-        Error e;
-        e.code = ERROR_NONE;
-        e.line = 0;
-        e.file = NULL;
-        e.msg = NULL;
-        return e;
-    }
-}

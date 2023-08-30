@@ -159,6 +159,9 @@ void close_log_file()
         fclose(log_file);
         log_file = NULL;
     }
+
+    destroy_error_vector();
+    destroy_logger_arena();
 }
 
 void destroy_logger_arena() {
