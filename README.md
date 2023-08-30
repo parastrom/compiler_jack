@@ -2,6 +2,19 @@
 
 A jack compiler following traditional compiler design.
 
+## Build instructions
+
+Required to run build script: cmake, ninja, gcc
+- clone/download repo
+- cd into dir
+- chmod +x ./build.sh
+- run the script 
+
+```
+$ > chmod +x ./build.sh
+$ > ./build.sh
+```
+
 ## Features
 ___
 ### Lexer /Tokenizer

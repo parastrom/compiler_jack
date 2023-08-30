@@ -13,5 +13,7 @@ ninja
 
 # Step 4: Clean the project.
 
+ninja clean
+
 # Step 5: Return to the root directory.
 cd ..
